@@ -118,15 +118,41 @@ local function button(x, y, w, label, textc)
 end
 
 -- === STARGATE RING ===
+local chevrons = {0,0,0,0,0,0,0,0,0}  -- 0=inactive, 1=active
+local chevronColors = {
+  MilkyWay = colors.orange,
+  Pegasus = colors.blue,
+  Universe = colors.white
+}
 
-local function drawGate(animStep,gatecolor)
+local function getChevronColor()
+  local gateType = stargate.getGateType()
+  return chevronColors[gateType]
+end
+
+local function activateChevron(index)
+  if index >= 1 and index <= 9 then
+    chevrons[index] = 1
+  end
+end
+
+local function deactivateChevron(index)
+  if index >= 1 and index <= 9 then
+    chevrons[index] = 0
+  end
+end
+
+local function resetChevrons()
+  for i = 1, 9 do
+    chevrons[i] = 0
+  end
+end
+
+local function drawGate(gatecolor)
   local cx = math.floor(mw/2)
   local cy = math.floor(mh/2)
   monitor.setBackgroundColor(gatecolor)
-  local radius = 11
-  if dialing then
-    radius = 11 + math.sin(math.rad(animStep)) * 2
-  end
+  local radius = 15
   local inner_radius = radius - 4
   for dx = -math.floor(radius), math.floor(radius) do
     for dy = -math.floor(radius), math.floor(radius) do
@@ -140,6 +166,34 @@ local function drawGate(animStep,gatecolor)
     end
   end
   monitor.setBackgroundColor(colors.black)
+  if runtime then
+
+  -- Draw chevrons on the ring (9 chevrons at 40° intervals)
+  local chevronColor = getChevronColor()
+  for i = 1, 9 do
+    local angle = (i - 1) * 40 - 90  -- Start at top, 40° intervals
+    local rad = math.rad(angle)
+    local chevx = cx + math.cos(rad) * (radius - 1)
+    local chevy = cy + math.sin(rad) * (radius - 1)
+    
+    chevx = math.floor(chevx + 0.5)
+    chevy = math.floor(chevy + 0.5)
+    
+    monitor.setCursorPos(chevx, chevy)
+    
+    if chevrons[i] == 0 then
+      monitor.setBackgroundColor(colors.lightGray)
+    else
+      monitor.setBackgroundColor(chevronColor)
+    end
+    
+  
+    monitor.write(" ")
+  end
+  
+  monitor.setTextColor(colors.white)
+  monitor.setBackgroundColor(colors.black)
+  end
 end
 
 -- === DRAW FUNCTIONS ===
@@ -215,8 +269,10 @@ local function drawButtons()
     button(28,mh-3,12,"Iris closed", colors.red)
   end
   button(mw-23,mh-3,6,Version, colors.white)
-  if gateOpen then
+  if gateOpen and not dialing then
     button(mw-37,mh-3,10,"Close Gate ", colors.red)
+  elseif dialing and not gateOpen then
+    button(mw-37,mh-3,10,"Abort Dial ", colors.yellow)
   else
     button(mw-37,mh-3,10,"Gate Closed", colors.green)
   end
@@ -243,20 +299,19 @@ local function drawStatus()
 end
 
 -- === MAIN UI DRAW ===
-local function drawUI(animStep)
-  if not animStep then
-    monitor.clear()
-    drawLeftBox()
-    drawRightBox()
-    drawButtons()
-    drawStatus()
-  end
-  drawGate(0,colors.gray)
+local function drawUI()
+  monitor.clear()
+  drawLeftBox()
+  drawRightBox()
+  drawButtons()
+  drawStatus()
+  drawGate(colors.gray)
 end
 
 -- === DIAL ANIMATION ===
 local function dialSequence()
   dialing = true
+  resetChevrons()
   local addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
   if addresscheck == true then
     if reqGlyph == 7 then
@@ -268,6 +323,7 @@ local function dialSequence()
     end
     dialing = true
   else
+    resetChevrons()
     monitor.setCursorPos(21,1)
     monitor.setTextColor(colors.red)
     monitor.write("Invalid address: "..(err or "Unknown error"))
@@ -275,6 +331,7 @@ local function dialSequence()
     sleep(2)
     monitor.setCursorPos(21,1)
     monitor.write(string.rep(" ", 41))
+    drawGate(colors.gray)
   end
 end
 
@@ -360,6 +417,14 @@ local function handleTouch(x,y)
     stargate.disengageGate()
   end
 
+  --Abort Dial
+  if dialing and x>=mw-37 and x<=mw-25 and y==mh-3 then
+    gateOpen = false
+    dialing = false
+    changed.buttons = true
+    stargate.abortDialing()
+  end
+
   -- Iris button
   if x>=28 and x<=40 and y==mh-3 then
     stargate.toggleIris()
@@ -384,7 +449,7 @@ local function handleTouch(x,y)
     monitor.write("Shutting down...")
     monitor.setTextColor(colors.white)
     sleep(2)
-    drawGate(0,colors.black)
+    drawGate(colors.black)
     monitor.clear()
   end
 end
@@ -393,7 +458,7 @@ end
 drawUI()
 
 while runtime do
-  local e, side, x, y = os.pullEvent()
+  local e, side, x, y, z,za = os.pullEvent()
   if e == "monitor_touch" then
     handleTouch(x,y)
     if changed.left then drawLeftBox() changed.left = false end
@@ -401,9 +466,9 @@ while runtime do
     if changed.buttons then drawButtons() changed.buttons = false end
     if changed.status then drawStatus() changed.status = false end
     if runtime then
-      drawGate(0,colors.gray)
+      drawGate(colors.gray)
     else
-      drawGate(0,colors.black)
+      drawGate(colors.black)
     end
   end
   if e == "stargate_ping" then
@@ -413,7 +478,71 @@ while runtime do
   end
   if e == "stargate_wormhole_open_fully" then
     gateOpen = true
-    drawButtons()
     dialing = false
+    drawButtons()
+    monitor.setCursorPos(21,1)
+    monitor.write(string.rep(" ", 41))
+  end
+  if e == "stargate_wormhole_incoming" then
+    monitor.setCursorPos(21,1)
+    monitor.setTextColor(colors.red)
+    monitor.write("Incoming wormhole detected! ")
+    monitor.setTextColor(colors.white)
+    if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
+      stargate.toggleIris()
+    end
+    gateOpen = false
+    dialing = false
+    if x == 7 then
+      chevrons = {1,1,1,1,0,0,1,1,1}
+    elseif x == 8 then
+      chevrons = {1,1,1,1,1,0,1,1,1}
+    elseif x == 9 then
+      chevrons = {1,1,1,1,1,1,1,1,1}
+    end
+    drawGate(colors.gray)
+    drawButtons()
+  end
+  if e == "stargate_wormhole_close_fully" then
+    if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
+      stargate.toggleIris()
+    end
+    resetChevrons()
+    drawGate(colors.gray)
+    drawButtons()
+  end
+  if e == "stargate_wormhole_close_unstable" then
+    gateOpen = false
+    dialing = false
+    resetChevrons()
+    drawGate(colors.gray)
+    drawButtons()
+  end
+  if e == "stargate_chevron_engaged" then
+    --monitor.setCursorPos(21,1)
+    --monitor.setTextColor(colors.red)
+    --monitor.write(x..y..z..za)
+    --monitor.setTextColor(colors.white)
+
+    if z == 0 then
+      activateChevron(2)--1
+    elseif z == 1 then
+      activateChevron(3)--2
+    elseif z == 2 then
+      activateChevron(4)--3
+    elseif z == 3 then
+      activateChevron(7)--4
+    elseif z == 4 then
+      activateChevron(8)--5
+    elseif z == 5 then
+      activateChevron(9)--6
+    elseif z == 6 then
+      activateChevron(5)--7
+    elseif z == 7 then
+      activateChevron(6)--8
+    elseif z == 8 then
+      activateChevron(1)--9
+    end
+    drawGate(colors.gray)
   end
 end
