@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-
+local Version = "0.01"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -14,11 +14,20 @@ local stargate = peripheral.find("stargate")
 if not stargate then
   error("Kein Stargate gefunden!")
 end
-local configsf = dofile("selftest.lua")
+local configsf = dofile("selftest.cfg")
+local gateEntries = dofile("GateEntries.ff")
 
 local function saveConfig()
-  local file = fs.open("selftest.lua", "w")
+  local file = fs.open("selftest.cfg", "w")
   file.write("local config = " .. textutils.serialize(configsf) .. "\nreturn config")
+  file.close()
+end
+
+local function saveGateEntries()
+  local file = fs.open("GateEntries.ff", "w")
+  file.write("-- Gate Entries Database\n")
+  file.write("-- Struktur: name, mw (MilkyWay), pg (Pegasus), un (Universe), idc (ID Code)\n\n")
+  file.write("return " .. textutils.serialize(gateEntries) .. "\n")
   file.close()
 end
 
@@ -52,18 +61,37 @@ monitor.clear()
 
 local mw, mh = monitor.getSize()
 
--- === STATE ===
+-- === Initial Values ===
 local gateOpen = false
 local dialing = false
 local selectedAddress = nil
 local changed = {}
 local runtime = true
 
-local addresses = {
-  "Abydos"
-}
+-- Erstelle Adressen-Array aus Gate Entries
+local addresses = {}
+for i, entry in ipairs(gateEntries) do
+  table.insert(addresses, entry.name)
+end
 
-local symbols = {"Andromeda","Aquarius","Aries","Auriga","Bootes","Cancer","Canis Minor","Capricornus","Centaurus","Cetus","Corona Australis","Crater","Equuleus","Eridanus","Gemini","Hydra","Leo","Leo Minor","Libra","Lynx","Microscopium","Monoceros","Norma","Orion","Pegasus","Perseus","Pisces","Piscis Austrinus","Sagittarius","Scorpius","Sculptor","Scutum","Serpens Caput","Sextans","Taurus","Triangulum","Virgo"}
+local capacitors = stargate.getCapacitorsInstalled()
+local symbollistfordial = {}
+local numsymbolsselected = 0
+local nineSelected = false
+
+local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aries","Auriga","Bootes","Cancer","Canis Minor","Capricornus","Centaurus","Cetus","Corona Australis","Crater","Equuleus","Eridanus","Gemini","Hydra","Leo","Leo Minor","Libra","Lynx","Microscopium","Monoceros","Norma","Orion","Pegasus","Perseus","Pisces","Piscis Austrinus","Sagittarius","Scorpius","Sculptor","Scutum","Serpens Caput","Sextans","Taurus","Triangulum","Virgo"}
+local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
+local symbolsUN = {"17","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"}
+
+if stargate.getGateType() == "MilkyWay" then
+  symbols = symbolsMW
+elseif stargate.getGateType() == "Pegasus" then
+  symbols = symbolsPG
+elseif stargate.getGateType() == "Universe" then
+  symbols = symbolsUN
+else
+  error("Unbekannter Gate-Typ: " .. stargate.getGateType())
+end
 
 -- === DRAW HELPERS ===
 local function box(x, y, w, h, title)
@@ -116,7 +144,7 @@ end
 
 -- === DRAW FUNCTIONS ===
 local function drawLeftBox()
-  box(1,1,20,mh-3,"Gate Entries")
+  box(1,1,19,mh-3,"Gate Entries")
   for i,v in ipairs(addresses) do
     monitor.setCursorPos(2,1+i)
     if selectedAddress == i then
@@ -125,41 +153,85 @@ local function drawLeftBox()
       monitor.setTextColor(colors.white)
     end
     monitor.write(v)
+    monitor.setTextColor(colors.white)
   end
 end
 
 local function drawRightBox()
-  box(mw-16,1,18,mh+1,"Origin")
+  box(mw-16,0,18,mh+2,"Symbols ("..numsymbolsselected.."/8)")
   for i=1,math.min(#symbols,mh) do
-    monitor.setCursorPos(mw-15,1+i)
-    if selectedChevron == i then
+    monitor.setCursorPos(mw-15,0+i)
+    local isSelected = false
+    local selectionIndex = 0
+
+    -- Sonderfall: erstes Symbol kann als Slot 9 benutzt werden
+    if i == 1 and nineSelected then
+      isSelected = true
+      selectionIndex = 9
+    else
+      for idx, sym in ipairs(symbollistfordial) do
+        if sym == symbols[i] then
+          isSelected = true
+          selectionIndex = idx
+          break
+        end
+      end
+    end
+
+    if isSelected then
       monitor.setTextColor(colors.lime)
+      monitor.setBackgroundColor(colors.gray)
     else
       monitor.setTextColor(colors.white)
+      monitor.setBackgroundColor(colors.black)
     end
     monitor.write(symbols[i])
+    monitor.setBackgroundColor(colors.black)
+    monitor.setTextColor(colors.white)
+
+    -- Zeige die Reihenfolgenummer außerhalb der Box (nicht für erstes Symbol)
+    if i ~= 1 then
+      monitor.setCursorPos(mw-17,0+i)
+      if isSelected then
+        monitor.setTextColor(colors.lime)
+        monitor.write(tostring(selectionIndex))
+      else
+        monitor.write(" ")
+      end
+      monitor.setTextColor(colors.white)
+    end
   end
 end
 
 local function drawButtons()
-  button(23,3,6,"Dial", colors.white)
-  button(30,3,11,"Add Entry", colors.white)
-  button(42,3,12,"Edit Entry", colors.white)
-  button(23,mh-3,6,"Exit", colors.white)
+  button(21,3,6,"Dial", colors.white)
+  button(28,3,11,"Add Entry", colors.white)
+  button(40,3,12,"Edit Entry", colors.white)
+  button(21,mh-3,6,"Exit", colors.white)
   if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
-    button(30,mh-3,10," Iris open ", colors.green)
+    button(28,mh-3,10,"Iris opened", colors.green)
   end
   if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
-    button(30,mh-3,12,"Iris closed", colors.red)
+    button(28,mh-3,12,"Iris closed", colors.red)
   end
+  button(mw-23,mh-3,6,Version, colors.white)
+  if gateOpen then
+    button(mw-37,mh-3,10,"Close Gate ", colors.red)
+  else
+    button(mw-37,mh-3,10,"Gate Closed", colors.green)
+  end
+  button(55,3,5,"Clear", colors.orange)
 end
 
 local function drawStatus()
   box(1,mh-2,mw-18,3)
   monitor.setCursorPos(2,mh-1)
-  monitor.write("Energy: "..stargate.getEnergyStored().." FE  Capacitors installed: "..stargate.getCapacitorsInstalled())
-
-  monitor.setCursorPos(mw-29,mh-1)
+  monitor.write("Energy: "..stargate.getEnergyStored().." FE")
+  monitor.setCursorPos(23,mh-1)
+  monitor.write("Capacitors installed: ")
+  monitor.setCursorPos(45,mh-1)
+  monitor.write(capacitors)
+  --[[monitor.setCursorPos(mw-29,mh-1)
   if gateOpen then
     monitor.setTextColor(colors.red)
     monitor.write("CLOSE GATE")
@@ -167,7 +239,7 @@ local function drawStatus()
     monitor.setTextColor(colors.green)
     monitor.write("Gate Closed")
   end
-  monitor.setTextColor(colors.white)
+  monitor.setTextColor(colors.white)]]--
 end
 
 -- === MAIN UI DRAW ===
@@ -185,9 +257,51 @@ end
 -- === DIAL ANIMATION ===
 local function dialSequence()
   dialing = true
-  sleep(1)
-  gateOpen = true
-  dialing = false
+  local addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
+  if addresscheck == true then
+    if reqGlyph == 7 then
+      stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
+    elseif reqGlyph == 8 then
+      stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
+    else
+      stargate.dialAddress(symbollistfordial)
+    end
+    dialing = true
+  else
+    monitor.setCursorPos(21,1)
+    monitor.setTextColor(colors.red)
+    monitor.write("Invalid address: "..(err or "Unknown error"))
+    monitor.setTextColor(colors.white)
+    sleep(2)
+    monitor.setCursorPos(21,1)
+    monitor.write(string.rep(" ", 41))
+  end
+end
+
+-- === LOAD ADDRESS SYMBOLS ===
+local function loadAddressSymbols(addressIndex)
+  symbollistfordial = {}
+  numsymbolsselected = 0
+  nineSelected = false
+  
+  if addressIndex and gateEntries[addressIndex] then
+    local entry = gateEntries[addressIndex]
+    local gateType = stargate.getGateType()
+    local symbolSequence = {}
+    
+    if gateType == "MilkyWay" and entry.mw then
+      symbolSequence = entry.mw
+    elseif gateType == "Pegasus" and entry.pg then
+      symbolSequence = entry.pg
+    elseif gateType == "Universe" and entry.un then
+      symbolSequence = entry.un
+    end
+    
+    for _, sym in ipairs(symbolSequence) do
+      table.insert(symbollistfordial, sym)
+      numsymbolsselected = numsymbolsselected + 1
+    end
+  end
 end
 
 -- === TOUCH HANDLING ===
@@ -197,35 +311,75 @@ local function handleTouch(x,y)
     local index = y - 1
     if addresses[index] then
       selectedAddress = index
+      loadAddressSymbols(index)
       changed.left = true
+      changed.right = true
+    end
+  end
+
+  -- Symbols select (Mehrfach-Auswahl)
+  if x >= mw-16 and x <= mw and y >= 1 and y <= mh then
+    local index = y
+    if symbols[index] then
+      -- Sonderfall: erstes Symbol toggelt exklusiv Slot 9
+      if index == 1 then
+        nineSelected = not nineSelected
+        table.insert(symbollistfordial,9,symbols[index])
+        changed.right = true
+      else
+        local found = false
+        for i, sym in ipairs(symbollistfordial) do
+          if sym == symbols[index] then
+            table.remove(symbollistfordial, i)
+            found = true
+            break
+          end
+        end
+        if not found and numsymbolsselected < 8 then
+          table.insert(symbollistfordial, symbols[index])
+          numsymbolsselected = numsymbolsselected + 1
+        end
+        if found then
+          numsymbolsselected = numsymbolsselected - 1
+        end
+        changed.right = true
+      end
     end
   end
 
   -- Dial button
-  if x>=23 and x<=32 and y==3 and not gateOpen and selectedAddress then
+  if x>=21 and x<=26 and y==3 and not gateOpen then
     dialSequence()
     changed.buttons = true
-    changed.status = true
   end
 
   -- Close gate
-  if gateOpen and x>=mw-29 and x<mw-19 and y==mh-1 then
+  if gateOpen and x>=mw-37 and x<=mw-25 and y==mh-3 then
     gateOpen = false
     changed.buttons = true
-    changed.status = true
+    stargate.disengageGate()
   end
 
   -- Iris button
-  if x>=30 and x<=36 and y==mh-3 then
+  if x>=28 and x<=40 and y==mh-3 then
     stargate.toggleIris()
     sleep(0.5)
     changed.buttons = true
   end
 
+  -- Clear button
+  if x>=55 and x<=60 and y==3 then
+    symbollistfordial = {}
+    numsymbolsselected = 0
+    nineSelected = false
+    changed.right = true
+    changed.buttons = true
+  end
+
   -- Exit button
-  if runtime and x>=23 and x<=29 and y==mh-3 then
+  if runtime and x>=21 and x<=26 and y==mh-3 then
     runtime = false
-    monitor.setCursorPos(23,1)
+    monitor.setCursorPos(21,1)
     monitor.setTextColor(colors.red)
     monitor.write("Shutting down...")
     monitor.setTextColor(colors.white)
@@ -251,5 +405,15 @@ while runtime do
     else
       drawGate(0,colors.black)
     end
+  end
+  if e == "stargate_ping" then
+    capacitors = stargate.getCapacitorsInstalled()
+    sleep(0.1)
+    drawStatus()
+  end
+  if e == "stargate_wormhole_open_fully" then
+    gateOpen = true
+    drawButtons()
+    dialing = false
   end
 end
