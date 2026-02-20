@@ -1,0 +1,17 @@
+-- Iris Codes Database
+-- Struktur: name, code, expires (timestamp), used (boolean)
+
+return {
+  {
+    used = false,
+    limited = false,
+    name = "TestCode1",
+    code = "1234",
+  },
+  {
+    used = true,
+    limited = true,
+    name = "TestCode2",
+    code = "5678",
+  },
+}

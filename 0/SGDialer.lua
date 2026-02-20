@@ -16,6 +16,7 @@ if not stargate then
 end
 local configsf = dofile("selftest.cfg")
 local gateEntries = dofile("GateEntries.ff")
+local irisCodes = dofile("IrisCodes.ff")
 
 local function saveConfig()
   local file = fs.open("selftest.cfg", "w")
@@ -28,6 +29,14 @@ local function saveGateEntries()
   file.write("-- Gate Entries Database\n")
   file.write("-- Struktur: name, mw (MilkyWay), pg (Pegasus), un (Universe), idc (ID Code)\n\n")
   file.write("return " .. textutils.serialize(gateEntries) .. "\n")
+  file.close()
+end
+
+local function saveIrisCodes()
+  local file = fs.open("IrisCodes.ff", "w")
+  file.write("-- Iris Codes Database\n")
+  file.write("-- Struktur: name, code, expires (timestamp), used (boolean)\n\n")
+  file.write("return " .. textutils.serialize(irisCodes) .. "\n")
   file.close()
 end
 
@@ -67,6 +76,8 @@ local dialing = false
 local selectedAddress = nil
 local changed = {}
 local runtime = true
+local sendIDC = nil
+local IDCAccepted = false
 
 -- Erstelle Adressen-Array aus Gate Entries
 local addresses = {}
@@ -119,6 +130,7 @@ end
 
 -- === STARGATE RING ===
 local chevrons = {0,0,0,0,0,0,0,0,0}  -- 0=inactive, 1=active
+local innerColor = colors.black  -- Farbe des Ring-Inneren
 local chevronColors = {
   MilkyWay = colors.orange,
   Pegasus = colors.blue,
@@ -128,6 +140,10 @@ local chevronColors = {
 local function getChevronColor()
   local gateType = stargate.getGateType()
   return chevronColors[gateType]
+end
+
+local function setInnerColor(color)
+  innerColor = color
 end
 
 local function activateChevron(index)
@@ -165,6 +181,22 @@ local function drawGate(gatecolor)
       end
     end
   end
+  
+  -- Färbe das Innere des Rings
+  monitor.setBackgroundColor(innerColor)
+  local innergateradius = radius - 3
+  for dx = -math.floor(innergateradius), math.floor(innergateradius) do
+    for dy = -math.floor(innergateradius), math.floor(innergateradius) do
+      local dist = dx*dx + dy*dy
+      if dist <= (innergateradius - 0.5)^2 then
+        local x = cx + dx
+        local y = cy + dy
+        monitor.setCursorPos(x, y)
+        monitor.write(" ")
+      end
+    end
+  end
+  
   monitor.setBackgroundColor(colors.black)
   if runtime then
 
@@ -264,9 +296,15 @@ local function drawButtons()
   button(21,mh-3,6,"Exit", colors.white)
   if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
     button(28,mh-3,10,"Iris opened", colors.green)
+    if gateOpen then
+      setInnerColor(colors.blue)
+    else 
+      setInnerColor(colors.black)
+    end
   end
   if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
     button(28,mh-3,12,"Iris closed", colors.red)
+    setInnerColor(colors.lightGray)
   end
   button(mw-23,mh-3,6,Version, colors.white)
   if gateOpen and not dialing then
@@ -353,12 +391,51 @@ local function loadAddressSymbols(addressIndex)
     elseif gateType == "Universe" and entry.un then
       symbolSequence = entry.un
     end
-    
+    sendIDC = entry.idc
     for _, sym in ipairs(symbolSequence) do
       table.insert(symbollistfordial, sym)
       numsymbolsselected = numsymbolsselected + 1
     end
   end
+end
+
+-- === IRIS CODE RECEIVED HANDLER ===
+local function irisCodeRecived(IDC)
+  for i, entry in ipairs(irisCodes) do
+    if entry.code == IDC and not entry.used then
+      if entry.limited then
+        entry.used = true
+        saveIrisCodes()
+      end
+        -- Gültiger Code: Iris öffnen
+        if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
+          setInnerColor(colors.blue)
+          drawGate(colors.gray)
+          stargate.toggleIris()
+          changed.buttons = true
+          drawButtons()
+        end
+        monitor.setCursorPos(21,1)
+        monitor.setTextColor(colors.green)
+        monitor.write("Iris code '" .. entry.name .. "' accepted.")
+        stargate.sendMessageToIncoming("IDC Accepted")
+        IDCAccepted = true
+        monitor.setTextColor(colors.white)
+        sleep(5)
+        monitor.setCursorPos(21,1)
+        monitor.write(string.rep(" ", 41))
+        return
+    end
+  end
+  -- Kein gültiger Code
+  monitor.setCursorPos(21,1)
+  monitor.setTextColor(colors.red)
+  monitor.write("Invalid iris code received.")
+  stargate.sendMessageToIncoming("IDC Rejected")
+  monitor.setTextColor(colors.white)
+  sleep(5)
+  monitor.setCursorPos(21,1)
+  monitor.write(string.rep(" ", 41))
 end
 
 -- === TOUCH HANDLING ===
@@ -449,6 +526,7 @@ local function handleTouch(x,y)
     monitor.write("Shutting down...")
     monitor.setTextColor(colors.white)
     sleep(2)
+    setInnerColor(colors.black)
     drawGate(colors.black)
     monitor.clear()
   end
@@ -476,20 +554,37 @@ while runtime do
     sleep(0.1)
     drawStatus()
   end
-  if e == "stargate_wormhole_open_fully" then
+  if e == "stargate_wormhole_open_unstable" then
     gateOpen = true
     dialing = false
     drawButtons()
+    if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
+      setInnerColor(colors.blue)
+      drawGate(colors.gray)
+    end
     monitor.setCursorPos(21,1)
     monitor.write(string.rep(" ", 41))
   end
+  if e == "stargate_wormhole_open_fully" then
+    local _, openState = stargate.getGateStatus()
+    if openState then
+      monitor.setCursorPos(21,1)
+      monitor.write("Code: "..sendIDC)
+      stargate.sendIrisCode(sendIDC)
+    end
+  end
   if e == "stargate_wormhole_incoming" then
+    IDCAccepted = false
     monitor.setCursorPos(21,1)
     monitor.setTextColor(colors.red)
     monitor.write("Incoming wormhole detected! ")
     monitor.setTextColor(colors.white)
     if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
       stargate.toggleIris()
+      if stargate.getIrisState() == "CLOSING" or stargate.getIrisState() == "CLOSED" then
+        setInnerColor(colors.lightGray)
+        drawGate(colors.gray)
+      end
     end
     gateOpen = false
     dialing = false
@@ -507,6 +602,9 @@ while runtime do
     if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
       stargate.toggleIris()
     end
+    monitor.setCursorPos(21,1)
+    monitor.write(string.rep(" ", 41))
+    setInnerColor(colors.black)
     resetChevrons()
     drawGate(colors.gray)
     drawButtons()
@@ -514,28 +612,31 @@ while runtime do
   if e == "stargate_wormhole_close_unstable" then
     gateOpen = false
     dialing = false
-    resetChevrons()
-    drawGate(colors.gray)
-    drawButtons()
+  end
+  if e == "stargate_iris_code_received" then
+    monitor.setCursorPos(21,1)
+    monitor.write(x)
+    irisCodeRecived(x)
   end
   if e == "stargate_chevron_engaged" then
-    --monitor.setCursorPos(21,1)
-    --monitor.setTextColor(colors.red)
-    --monitor.write(x..y..z..za)
-    --monitor.setTextColor(colors.white)
-
     if z == 0 then
-      activateChevron(2)--1
+      --activateChevron(2)--1
+      chevrons = {0,1,0,0,0,0,0,0,0}
     elseif z == 1 then
-      activateChevron(3)--2
+      --activateChevron(3)--2
+      chevrons = {0,1,1,0,0,0,0,0,0}
     elseif z == 2 then
-      activateChevron(4)--3
+      --activateChevron(4)--3
+      chevrons = {0,1,1,1,0,0,0,0,0}
     elseif z == 3 then
-      activateChevron(7)--4
+      --activateChevron(7)--4
+      chevrons = {0,1,1,1,0,0,1,0,0}
     elseif z == 4 then
-      activateChevron(8)--5
+      --activateChevron(8)--5
+      chevrons = {0,1,1,1,0,0,1,1,0}
     elseif z == 5 then
-      activateChevron(9)--6
+      --activateChevron(9)--6
+      chevrons = {0,1,1,1,0,0,1,1,1}
     elseif z == 6 then
       activateChevron(5)--7
     elseif z == 7 then
@@ -544,5 +645,12 @@ while runtime do
       activateChevron(1)--9
     end
     drawGate(colors.gray)
+  end
+  if e == "stargate_iris_toggled" then
+    if not IDCAccepted then
+      if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
+        stargate.toggleIris()
+      end
+    end
   end
 end
