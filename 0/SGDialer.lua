@@ -78,6 +78,7 @@ local changed = {}
 local runtime = true
 local sendIDC = nil
 local IDCAccepted = false
+local DHDDial = false
 
 -- Erstelle Adressen-Array aus Gate Entries
 local addresses = {}
@@ -566,11 +567,14 @@ while runtime do
     monitor.write(string.rep(" ", 41))
   end
   if e == "stargate_wormhole_open_fully" then
-    local _, openState = stargate.getGateStatus()
+    local _,_, openState = stargate.getGateStatus()
     if openState then
-      monitor.setCursorPos(21,1)
-      monitor.write("Code: "..sendIDC)
-      stargate.sendIrisCode(sendIDC)
+      if not DHDDial then
+        monitor.setCursorPos(21,1)
+        monitor.write("Code: "..sendIDC)
+        stargate.sendIrisCode(sendIDC)
+      end
+      
     end
   end
   if e == "stargate_wormhole_incoming" then
@@ -612,6 +616,7 @@ while runtime do
   if e == "stargate_wormhole_close_unstable" then
     gateOpen = false
     dialing = false
+    DHDDial = false
   end
   if e == "stargate_iris_code_received" then
     monitor.setCursorPos(21,1)
@@ -619,6 +624,9 @@ while runtime do
     irisCodeRecived(x)
   end
   if e == "stargate_chevron_engaged" then
+    if x == "DHD" then
+      DHDDial = true
+    end
     if z == 0 then
       --activateChevron(2)--1
       chevrons = {0,1,0,0,0,0,0,0,0}

@@ -4,14 +4,14 @@
 return {
   {
     used = false,
-    limited = false,
     name = "TestCode1",
+    limited = false,
     code = "1234",
   },
   {
     used = true,
-    limited = true,
     name = "TestCode2",
+    limited = true,
     code = "5678",
   },
 }
