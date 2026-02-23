@@ -1,4 +1,4 @@
----@diagnostic disable: undefined-global, undefined-field
+---@diagnostic disable: undefined-global, undefined-field, lowercase-global
 -- ===============================
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
@@ -21,14 +21,6 @@ local irisCodes = dofile("IrisCodes.ff")
 local function saveConfig()
   local file = fs.open("selftest.cfg", "w")
   file.write("local config = " .. textutils.serialize(configsf) .. "\nreturn config")
-  file.close()
-end
-
-local function saveGateEntries()
-  local file = fs.open("GateEntries.ff", "w")
-  file.write("-- Gate Entries Database\n")
-  file.write("-- Struktur: name, mw (MilkyWay), pg (Pegasus), un (Universe), idc (ID Code)\n\n")
-  file.write("return " .. textutils.serialize(gateEntries) .. "\n")
   file.close()
 end
 
@@ -61,7 +53,7 @@ if configsf.selftest then
   saveConfig()
 end
 
-
+local redstonerelay = peripheral.find("redstone_relay")
 
 
 monitor.setTextScale(0.5)
@@ -95,14 +87,14 @@ local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aries","Auriga","Bo
 local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
 local symbolsUN = {"17","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"}
 
-if stargate.getGateType() == "MilkyWay" then
+if stargate.getSymbolType() == "milkyway" then
   symbols = symbolsMW
-elseif stargate.getGateType() == "Pegasus" then
+elseif stargate.getSymbolType() == "pegasus" then
   symbols = symbolsPG
-elseif stargate.getGateType() == "Universe" then
+elseif stargate.getSymbolType() == "universe" then
   symbols = symbolsUN
 else
-  error("Unbekannter Gate-Typ: " .. stargate.getGateType())
+  error("Unbekannter Gate-Typ: " .. stargate.getSymbolType())
 end
 
 -- === DRAW HELPERS ===
@@ -150,12 +142,6 @@ end
 local function activateChevron(index)
   if index >= 1 and index <= 9 then
     chevrons[index] = 1
-  end
-end
-
-local function deactivateChevron(index)
-  if index >= 1 and index <= 9 then
-    chevrons[index] = 0
   end
 end
 
@@ -294,6 +280,7 @@ local function drawButtons()
   button(21,3,6,"Dial", colors.white)
   button(28,3,11,"Add Entry", colors.white)
   button(40,3,12,"Edit Entry", colors.white)
+  --button(40,4,9,"Edit IDC", colors.white)
   button(21,mh-3,6,"Exit", colors.white)
   if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
     button(28,mh-3,10,"Iris opened", colors.green)
@@ -307,7 +294,7 @@ local function drawButtons()
     button(28,mh-3,12,"Iris closed", colors.red)
     setInnerColor(colors.lightGray)
   end
-  button(mw-23,mh-3,6,Version, colors.white)
+  button(mw-23,mh-3,6,"IDCs", colors.white)
   if gateOpen and not dialing then
     button(mw-37,mh-3,10,"Close Gate ", colors.red)
   elseif dialing and not gateOpen then
@@ -326,6 +313,8 @@ local function drawStatus()
   monitor.write("Capacitors installed: ")
   monitor.setCursorPos(45,mh-1)
   monitor.write(capacitors)
+  monitor.setCursorPos(mw-22,mh-1)
+  monitor.write(Version)
   --[[monitor.setCursorPos(mw-29,mh-1)
   if gateOpen then
     monitor.setTextColor(colors.red)
@@ -349,9 +338,17 @@ end
 
 -- === DIAL ANIMATION ===
 local function dialSequence()
-  dialing = true
   resetChevrons()
-  local addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
+  if symbollistfordial[6] == "" then
+    addresscheck = false
+    err = "No Address saved"
+  elseif symbollistfordial[7] == "" then
+    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
+  elseif symbollistfordial[8] == "" then
+    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
+  else
+    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
+  end
   if addresscheck == true then
     if reqGlyph == 7 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
@@ -361,6 +358,9 @@ local function dialSequence()
       stargate.dialAddress(symbollistfordial)
     end
     dialing = true
+    if redstonerelay then
+      redstonerelay.setOutput("back", true)
+    end
   else
     resetChevrons()
     monitor.setCursorPos(21,1)
@@ -482,6 +482,55 @@ local function handleTouch(x,y)
     end
   end
 
+  -- Add Entry button
+  if x>=28 and x<=38 and y==3 then
+    shell.run("AddressEditor.lua add")
+    -- Reload data after returning
+    gateEntries = dofile("GateEntries.ff")
+    addresses = {}
+    for i, entry in ipairs(gateEntries) do
+      table.insert(addresses, entry.name)
+    end
+    selectedAddress = nil
+    changed.left = true
+    changed.right = true
+    changed.buttons = true
+    drawUI()
+  end
+
+  -- Edit Entry button
+  if x>=40 and x<=51 and y==3 then
+    if selectedAddress then
+      shell.run("AddressEditor.lua edit " .. selectedAddress)
+      -- Reload data after returning
+      gateEntries = dofile("GateEntries.ff")
+      addresses = {}
+      for i, entry in ipairs(gateEntries) do
+        table.insert(addresses, entry.name)
+      end
+      if selectedAddress > #addresses then
+        selectedAddress = #addresses
+      end
+      if selectedAddress then
+        loadAddressSymbols(selectedAddress)
+      end
+      changed.left = true
+      changed.right = true
+      changed.buttons = true
+      changed.status = true
+      drawUI()
+    end
+  end
+
+  -- Edit IDC button
+  if x>=mw-23 and x<=mw-18 and y==mh-3 then
+    shell.run("IDCEditor.lua")
+    -- Reload iris codes after returning mw-23,mh-3
+    irisCodes = dofile("IrisCodes.ff")
+    changed.buttons = true
+    drawUI()
+  end
+
   -- Dial button
   if x>=21 and x<=26 and y==3 and not gateOpen then
     dialSequence()
@@ -501,6 +550,9 @@ local function handleTouch(x,y)
     dialing = false
     changed.buttons = true
     stargate.abortDialing()
+    if redstonerelay then
+      redstonerelay.setOutput("back", false)
+    end
   end
 
   -- Iris button
@@ -579,6 +631,9 @@ while runtime do
   end
   if e == "stargate_wormhole_incoming" then
     IDCAccepted = false
+    if redstonerelay then
+      redstonerelay.setOutput("back", true)
+    end
     monitor.setCursorPos(21,1)
     monitor.setTextColor(colors.red)
     monitor.write("Incoming wormhole detected! ")
@@ -605,6 +660,9 @@ while runtime do
   if e == "stargate_wormhole_close_fully" then
     if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
       stargate.toggleIris()
+    end
+    if redstonerelay then
+      redstonerelay.setOutput("back", false)
     end
     monitor.setCursorPos(21,1)
     monitor.write(string.rep(" ", 41))

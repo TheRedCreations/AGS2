@@ -2,16 +2,4 @@
 -- Struktur: name, code, expires (timestamp), used (boolean)
 
 return {
-  {
-    used = false,
-    name = "TestCode1",
-    limited = false,
-    code = "1234",
-  },
-  {
-    used = true,
-    name = "TestCode2",
-    limited = true,
-    code = "5678",
-  },
 }

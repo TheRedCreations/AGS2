@@ -4,30 +4,39 @@
 return {
   {
     name = "Abydos",
-    mw = {"Taurus","Serpens Caput","Capricornus","Monoceros","Sagittarius","Orion","Canis Minor","Auriga","Point of Origin"},      -- MilkyWay Adresse
-    pg = {"Acjesis","Baselai","Danami","Ecrumig","Aaxel","Gilltin","Hacemill","Recktic","Subido"},      -- Pegasus Adresse
-    un = {"5","6","18","20","1","7","22","31","17"},           -- Universe Adresse
-    idc = "1",            -- ID Code
-  },
-  {
-    name = "MWright",
-    mw = {"Scutum","Leo Minor","Sextans","Aries","Monoceros","Eridanus","Aquarius","Leo","Point of Origin"},      -- MilkyWay Adresse
-    pg = {},      -- Pegasus Adresse
-    un = {},           -- Universe Adresse
-    idc = "1",            -- ID Code
-  },
-  {
-    name = "PGleft",
-    mw = {"Andromeda","Capricornus","Gemini","Serpens Caput","Orion","Hydra","Monoceros","Libra","Point of Origin"},      -- MilkyWay Adresse
-    pg = {},      -- Pegasus Adresse
-    un = {},           -- Universe Adresse
-    idc = "1",            -- ID Code
-  },
-  {
-    name = "UNleft",
-    mw = {"Leo","Orion","Pisces","Equuleus","Monoceros","Bootes","Auriga","Capricornus","Point of Origin"},      -- MilkyWay Adresse
-    pg = {},      -- Pegasus Adresse
-    un = {},           -- Universe Adresse
-    idc = "1",            -- ID Code
+    pg = {
+      "Acjesis",
+      "Baselai",
+      "Danami",
+      "Ecrumig",
+      "Aaxel",
+      "Gilltin",
+      "Hacemill",
+      "Recktic",
+      "Subido",
+    },
+    idc = "1",
+    un = {
+      "5",
+      "6",
+      "18",
+      "20",
+      "1",
+      "7",
+      "22",
+      "31",
+      "17",
+    },
+    mw = {
+      "Taurus",
+      "Serpens Caput",
+      "Capricornus",
+      "Monoceros",
+      "Sagittarius",
+      "Orion",
+      "Canis Minor",
+      "Auriga",
+      "Point of Origin",
+    },
   },
 }
