@@ -125,13 +125,13 @@ end
 local chevrons = {0,0,0,0,0,0,0,0,0}  -- 0=inactive, 1=active
 local innerColor = colors.black  -- Farbe des Ring-Inneren
 local chevronColors = {
-  MilkyWay = colors.orange,
-  Pegasus = colors.blue,
-  Universe = colors.white
+  milkyway = colors.orange,
+  pegasus = colors.blue,
+  universe = colors.white
 }
 
 local function getChevronColor()
-  local gateType = stargate.getGateType()
+  local gateType = stargate.getSymbolType()
   return chevronColors[gateType]
 end
 
@@ -382,14 +382,14 @@ local function loadAddressSymbols(addressIndex)
   
   if addressIndex and gateEntries[addressIndex] then
     local entry = gateEntries[addressIndex]
-    local gateType = stargate.getGateType()
+    local gateType = stargate.getSymbolType()
     local symbolSequence = {}
     
-    if gateType == "MilkyWay" and entry.mw then
+    if gateType == "milkyway" and entry.mw then
       symbolSequence = entry.mw
-    elseif gateType == "Pegasus" and entry.pg then
+    elseif gateType == "pegasus" and entry.pg then
       symbolSequence = entry.pg
-    elseif gateType == "Universe" and entry.un then
+    elseif gateType == "universe" and entry.un then
       symbolSequence = entry.un
     end
     sendIDC = entry.idc
