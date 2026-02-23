@@ -623,7 +623,7 @@ while runtime do
     if openState then
       if not DHDDial then
         monitor.setCursorPos(21,1)
-        monitor.write("Code: "..sendIDC)
+        --monitor.write("Code: "..sendIDC)
         stargate.sendIrisCode(sendIDC)
       end
       
