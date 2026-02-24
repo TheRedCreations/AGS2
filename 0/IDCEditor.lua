@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-global, undefined-field
 -- ===============================
 -- IDC EDITOR
 -- For managing Iris Codes in IrisCodes.ff

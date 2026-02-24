@@ -339,25 +339,55 @@ end
 -- === DIAL ANIMATION ===
 local function dialSequence()
   resetChevrons()
+  print("1")
   if symbollistfordial[6] == "" then
     addresscheck = false
-    err = "No Address saved"
+    err = "Address too short"
   elseif symbollistfordial[7] == "" then
-    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
+    if not configsf.smartdial then
+      addresscheck = true
+      reqGlyph = 7
+    else
+      addresscheck, err, _ = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
+      reqGlyph = 7
+      print("1a")
+    end
+     print("2")
   elseif symbollistfordial[8] == "" then
-    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
+    if not configsf.smartdial then
+      addresscheck = true
+      reqGlyph = 8
+    else
+      addresscheck, err, _ = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
+      reqGlyph = 8
+      print("1a")
+    end
+    print("3")
   else
-    addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
+    if not configsf.smartdial then
+      addresscheck = true
+      reqGlyph = 9
+    else
+      addresscheck, err, _ = stargate.getSymbolsNeeded(symbollistfordial)
+      reqGlyph = 9
+      print("1a")
+    end
+    print("4")
   end
   if addresscheck == true then
+    print("5")
     if reqGlyph == 7 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
+      print("5a")
     elseif reqGlyph == 8 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
+      print("5b")
     else
       stargate.dialAddress(symbollistfordial)
+      print("5c")
     end
     dialing = true
+    print("6")
     if redstonerelay then
       redstonerelay.setOutput("back", true)
     end
@@ -534,6 +564,7 @@ local function handleTouch(x,y)
   -- Dial button
   if x>=21 and x<=26 and y==3 and not gateOpen then
     dialSequence()
+    print("Start Dial")
     changed.buttons = true
   end
 

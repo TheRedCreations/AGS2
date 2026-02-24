@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-global, undefined-field
 -- ===============================
 -- ADDRESS EDITOR
 -- For adding and editing Gate Entries
@@ -184,7 +185,7 @@ local function drawSlots()
   end
   monitor.setCursorPos(2, 15)
   monitor.setTextColor(colors.lime)
-  monitor.write("[9]"..string.sub(slot9,1,8))
+  monitor.write("[9]"..string.sub(slot9,1,15))
   monitor.setTextColor(colors.white)
 end
 
@@ -403,7 +404,7 @@ local function handleTouch(x, y)
     return
   end
   
-  if y >= 13 and y <= 15 then
+  --[[if y >= 13 and y <= 15 then
     local selectedSlot = nil
     for i=1,6 do
       local sx = 2 + (i-1)*12
@@ -437,7 +438,7 @@ local function handleTouch(x, y)
       drawSymbols()
     end
     return
-  end
+  end]]--
   
   local yStart = 17
   local cols = 3
@@ -447,9 +448,13 @@ local function handleTouch(x, y)
     local clickedCol = math.floor((x - 2) / colWidth)
     local clickedRow = y - yStart - 1
     
-    if clickedCol >= 0 and clickedCol < cols and clickedRow >= 0 then
+  if clickedCol >= 0 and clickedCol < cols and clickedRow >= 0 then
       local idx = clickedRow * cols + clickedCol + 1
-      if idx >= 1 and idx <= #symbols then
+      -- Erster Symbol (Point of Origin/Subido/17) ist nicht anklickbar
+      if idx == 1 then
+        return
+      end
+      if idx >= 2 and idx <= #symbols then
         local sym = symbols[idx]
         
         if slot1 == sym then slot1 = ""
