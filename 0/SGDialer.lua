@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.04"
+local Version = "1.05"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -625,9 +625,11 @@ while runtime do
     end
   end
   if e == "stargate_ping" then
-    capacitors = stargate.getCapacitorsInstalled()
-    sleep(0.1)
-    drawStatus()
+    if not dialing then
+      capacitors = stargate.getCapacitorsInstalled()
+      --sleep(0.1)
+      drawStatus()
+    end
   end
   if e == "stargate_wormhole_open_unstable" then
     gateOpen = true
