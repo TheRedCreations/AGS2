@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.00"
+local Version = "1.04"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -68,7 +68,7 @@ local dialing = false
 local selectedAddress = nil
 local changed = {}
 local runtime = true
-local sendIDC = nil
+local sendIDC = ""
 local IDCAccepted = false
 local DHDDial = false
 
@@ -339,8 +339,7 @@ end
 -- === DIAL ANIMATION ===
 local function dialSequence()
   resetChevrons()
-  print("1")
-  if symbollistfordial[6] == "" then
+  if symbollistfordial[6] == "" or symbollistfordial[6] == nil then
     addresscheck = false
     err = "Address too short"
   elseif symbollistfordial[7] == "" then
@@ -348,46 +347,34 @@ local function dialSequence()
       addresscheck = true
       reqGlyph = 7
     else
-      addresscheck, err, _ = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
-      reqGlyph = 7
-      print("1a")
+      addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
     end
-     print("2")
   elseif symbollistfordial[8] == "" then
     if not configsf.smartdial then
       addresscheck = true
       reqGlyph = 8
     else
-      addresscheck, err, _ = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
-      reqGlyph = 8
-      print("1a")
+      addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
     end
-    print("3")
   else
     if not configsf.smartdial then
       addresscheck = true
       reqGlyph = 9
     else
-      addresscheck, err, _ = stargate.getSymbolsNeeded(symbollistfordial)
-      reqGlyph = 9
-      print("1a")
+      addresscheck, err, reqGlyph = stargate.getSymbolsNeeded(symbollistfordial)
     end
-    print("4")
   end
   if addresscheck == true then
-    print("5")
+    monitor.setCursorPos(21,1)
+    monitor.write("Dialing: "..entryName)
     if reqGlyph == 7 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
-      print("5a")
     elseif reqGlyph == 8 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
-      print("5b")
     else
       stargate.dialAddress(symbollistfordial)
-      print("5c")
     end
     dialing = true
-    print("6")
     if redstonerelay then
       redstonerelay.setOutput("back", true)
     end
@@ -423,6 +410,7 @@ local function loadAddressSymbols(addressIndex)
       symbolSequence = entry.un
     end
     sendIDC = entry.idc
+    entryName = entry.name
     for _, sym in ipairs(symbolSequence) do
       table.insert(symbollistfordial, sym)
       numsymbolsselected = numsymbolsselected + 1
@@ -564,7 +552,6 @@ local function handleTouch(x,y)
   -- Dial button
   if x>=21 and x<=26 and y==3 and not gateOpen then
     dialSequence()
-    print("Start Dial")
     changed.buttons = true
   end
 
@@ -589,7 +576,7 @@ local function handleTouch(x,y)
   -- Iris button
   if x>=28 and x<=40 and y==mh-3 then
     stargate.toggleIris()
-    sleep(0.5)
+    sleep(0.1)
     changed.buttons = true
   end
 
@@ -597,8 +584,12 @@ local function handleTouch(x,y)
   if x>=55 and x<=60 and y==3 then
     symbollistfordial = {}
     numsymbolsselected = 0
+    selectedAddress = 0
+    sendIDC = ""
+    entryName = ""
     nineSelected = false
     changed.right = true
+    changed.left = true
     changed.buttons = true
   end
 
@@ -655,7 +646,9 @@ while runtime do
       if not DHDDial then
         monitor.setCursorPos(21,1)
         --monitor.write("Code: "..sendIDC)
-        stargate.sendIrisCode(sendIDC)
+        if sendIDC ~= "" then
+          stargate.sendIrisCode(sendIDC)
+        end
       end
       
     end
@@ -697,8 +690,16 @@ while runtime do
     end
     monitor.setCursorPos(21,1)
     monitor.write(string.rep(" ", 41))
+    symbollistfordial = {}
+    numsymbolsselected = 0
+    selectedAddress = 0
+    sendIDC = ""
+    entryName = ""
     setInnerColor(colors.black)
     resetChevrons()
+    drawLeftBox()
+    drawRightBox()
+    drawStatus()
     drawGate(colors.gray)
     drawButtons()
   end
@@ -716,29 +717,31 @@ while runtime do
     if x == "DHD" then
       DHDDial = true
     end
-    if z == 0 then
+  end
+  if e == "stargate_chevron_lit" then
+    if x == 0 then
       --activateChevron(2)--1
       chevrons = {0,1,0,0,0,0,0,0,0}
-    elseif z == 1 then
+    elseif x == 1 then
       --activateChevron(3)--2
       chevrons = {0,1,1,0,0,0,0,0,0}
-    elseif z == 2 then
+    elseif x == 2 then
       --activateChevron(4)--3
       chevrons = {0,1,1,1,0,0,0,0,0}
-    elseif z == 3 then
+    elseif x == 3 then
       --activateChevron(7)--4
       chevrons = {0,1,1,1,0,0,1,0,0}
-    elseif z == 4 then
+    elseif x == 4 then
       --activateChevron(8)--5
       chevrons = {0,1,1,1,0,0,1,1,0}
-    elseif z == 5 then
+    elseif x == 5 then
       --activateChevron(9)--6
       chevrons = {0,1,1,1,0,0,1,1,1}
-    elseif z == 6 then
+    elseif x == 6 then
       activateChevron(5)--7
-    elseif z == 7 then
+    elseif x == 7 then
       activateChevron(6)--8
-    elseif z == 8 then
+    elseif x == 8 then
       activateChevron(1)--9
     end
     drawGate(colors.gray)
