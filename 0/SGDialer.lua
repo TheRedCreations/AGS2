@@ -646,10 +646,10 @@ while runtime do
     local _,_, openState = stargate.getGateStatus()
     if openState then
       if not DHDDial then
-        monitor.setCursorPos(21,1)
-        --monitor.write("Code: "..sendIDC)
         if sendIDC ~= "" then
           stargate.sendIrisCode(sendIDC)
+          monitor.setCursorPos(21,1)
+          monitor.write("Sending IDC. Iris could be closed!")
         end
       end
       
@@ -711,8 +711,8 @@ while runtime do
     DHDDial = false
   end
   if e == "stargate_iris_code_received" then
-    monitor.setCursorPos(21,1)
-    monitor.write(x)
+    --monitor.setCursorPos(21,1)
+    --monitor.write(x)
     irisCodeRecived(x)
   end
   if e == "stargate_chevron_engaged" then
