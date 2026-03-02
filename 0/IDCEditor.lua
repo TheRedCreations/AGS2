@@ -37,6 +37,7 @@ local function saveIrisCodes()
 end
 
 local function box(x, y, w, h, title)
+  monitor.setTextColor(colors.white)
   monitor.setCursorPos(x, y)
   monitor.write("+" .. string.rep("-", w-2) .. "+")
   for i=1,h-2 do

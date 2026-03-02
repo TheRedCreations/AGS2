@@ -285,7 +285,12 @@ local function importFromGate()
     elseif i == 9 then slot9 = addressSymbols[i]
     end
   end
-  
+  if slot7 == "Point of Origin" or slot7 == "Subido" or slot7 == "17" then
+    slot7 = ""
+  end
+  if slot8 == "Point of Origin" or slot8 == "Subido" or slot8 == "17" then
+    slot8 = ""
+  end
   if detectedType == "MilkyWay" and slot9 == "" then
     slot9 = getFirstSymbol(detectedType)
   end
