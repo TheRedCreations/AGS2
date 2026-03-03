@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.07"
+local Version = "1.08"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -808,34 +808,64 @@ while runtime do
     if x == "DHD" then
       DHDDial = true
     end
-  end
-  if e == "stargate_chevron_lit" then
-    if x == 0 then
+    if stargate.getSymbolType() == "universe" then
+      if z == 0 then
       --activateChevron(2)--1
       chevrons = {0,1,0,0,0,0,0,0,0}
-    elseif x == 1 then
+    elseif z == 1 then
       --activateChevron(3)--2
       chevrons = {0,1,1,0,0,0,0,0,0}
-    elseif x == 2 then
+    elseif z == 2 then
       --activateChevron(4)--3
       chevrons = {0,1,1,1,0,0,0,0,0}
-    elseif x == 3 then
+    elseif z == 3 then
       --activateChevron(7)--4
       chevrons = {0,1,1,1,0,0,1,0,0}
-    elseif x == 4 then
+    elseif z == 4 then
       --activateChevron(8)--5
       chevrons = {0,1,1,1,0,0,1,1,0}
-    elseif x == 5 then
+    elseif z == 5 then
       --activateChevron(9)--6
       chevrons = {0,1,1,1,0,0,1,1,1}
-    elseif x == 6 then
+    elseif z == 6 then
       activateChevron(5)--7
-    elseif x == 7 then
+    elseif z == 7 then
       activateChevron(6)--8
-    elseif x == 8 then
+    elseif z == 8 then
       activateChevron(1)--9
     end
     drawGate(colors.gray)
+    end
+  end
+  if e == "stargate_chevron_lit" then
+    if not stargate.getSymbolType() == "universe" then
+      if x == 0 then
+        --activateChevron(2)--1
+        chevrons = {0,1,0,0,0,0,0,0,0}
+      elseif x == 1 then
+        --activateChevron(3)--2
+        chevrons = {0,1,1,0,0,0,0,0,0}
+      elseif x == 2 then
+        --activateChevron(4)--3
+        chevrons = {0,1,1,1,0,0,0,0,0}
+      elseif x == 3 then
+        --activateChevron(7)--4
+        chevrons = {0,1,1,1,0,0,1,0,0}
+      elseif x == 4 then
+        --activateChevron(8)--5
+        chevrons = {0,1,1,1,0,0,1,1,0}
+      elseif x == 5 then
+        --activateChevron(9)--6
+        chevrons = {0,1,1,1,0,0,1,1,1}
+      elseif x == 6 then
+        activateChevron(5)--7
+      elseif x == 7 then
+        activateChevron(6)--8
+      elseif x == 8 then
+        activateChevron(1)--9
+      end
+      drawGate(colors.gray)
+    end
   end
   if e == "stargate_iris_toggled" then
     if not IDCAccepted then
