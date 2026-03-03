@@ -808,7 +808,7 @@ while runtime do
     if x == "DHD" then
       DHDDial = true
     end
-    if stargate.getSymbolType() == "universe" then
+
       if z == 0 then
       --activateChevron(2)--1
       chevrons = {0,1,0,0,0,0,0,0,0}
@@ -835,10 +835,10 @@ while runtime do
       activateChevron(1)--9
     end
     drawGate(colors.gray)
-    end
+
   end
   if e == "stargate_chevron_lit" then
-    if stargate.getSymbolType() == "milkyway" or stargate.getSymbolType() == "pegasus" then
+
       if x == 0 then
         --activateChevron(2)--1
         chevrons = {0,1,0,0,0,0,0,0,0}
@@ -865,7 +865,7 @@ while runtime do
         activateChevron(1)--9
       end
       drawGate(colors.gray)
-    end
+
   end
   if e == "stargate_iris_toggled" then
     if not IDCAccepted then
