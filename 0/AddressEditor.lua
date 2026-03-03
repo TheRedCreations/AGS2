@@ -31,7 +31,7 @@ local savedUN = {}
 
 local monitor = peripheral.find("monitor")
 if not monitor then
-  error("Kein Monitor gefunden!")
+  error("No Monitor found!")
 end
 
 monitor.setTextScale(0.5)
@@ -191,7 +191,7 @@ end
 
 local function drawSymbols()
   local yStart = 17
-  local h = 14
+  local h = 15
   box(1, yStart, mw, h, "Select Symbol:")
   
   local symbols = getSymbolsForType(currentGateType)

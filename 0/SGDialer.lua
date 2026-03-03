@@ -3,20 +3,21 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.05"
+local Version = "1.07"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
-  error("Kein Monitor gefunden!")
+  error("No Monitor found!")
 end
 
 local stargate = peripheral.find("stargate")
 if not stargate then
-  error("Kein Stargate gefunden!")
+  error("No Stargate found!")
 end
 local configsf = dofile("selftest.cfg")
 local gateEntries = dofile("GateEntries.ff")
 local irisCodes = dofile("IrisCodes.ff")
+local configsd = dofile("smartdial.cfg")
 
 local function saveConfig()
   local file = fs.open("selftest.cfg", "w")
@@ -78,6 +79,32 @@ for i, entry in ipairs(gateEntries) do
   table.insert(addresses, entry.name)
 end
 
+-- === Pagination ===
+local currentPage = 1
+local entriesPerPage = 0
+
+local function calculateEntriesPerPage()
+  -- Box height is mh-3, but we reserve bottom row for page navigation
+  -- Also reserve space for title, so entriesPerPage = mh - 5
+  entriesPerPage = mh - 5
+end
+
+local function getTotalPages()
+  if entriesPerPage == 0 then return 1 end
+  return math.max(1, math.ceil(#addresses / entriesPerPage))
+end
+
+local function getPageStart()
+  return (currentPage - 1) * entriesPerPage + 1
+end
+
+local function getPageEnd()
+  return math.min(currentPage * entriesPerPage, #addresses)
+end
+
+-- Calculate entries per page after addresses array is created
+calculateEntriesPerPage()
+
 local capacitors = stargate.getCapacitorsInstalled()
 local symbollistfordial = {}
 local numsymbolsselected = 0
@@ -94,7 +121,7 @@ elseif stargate.getSymbolType() == "pegasus" then
 elseif stargate.getSymbolType() == "universe" then
   symbols = symbolsUN
 else
-  error("Unbekannter Gate-Typ: " .. stargate.getSymbolType())
+  error("Unknown gate type: " .. stargate.getSymbolType())
 end
 
 -- === DRAW HELPERS ===
@@ -218,16 +245,56 @@ end
 -- === DRAW FUNCTIONS ===
 local function drawLeftBox()
   box(1,1,19,mh-3,"Gate Entries")
-  for i,v in ipairs(addresses) do
-    monitor.setCursorPos(2,1+i)
-    if selectedAddress == i then
-      monitor.setTextColor(colors.lime)
-    else
+  local pageStart = getPageStart()
+  local pageEnd = getPageEnd()
+  
+  for i = pageStart, pageEnd do
+    local v = addresses[i]
+    if v then
+      local displayIndex = i - pageStart + 2
+      monitor.setCursorPos(2, displayIndex)
+      if selectedAddress == i then
+        monitor.setTextColor(colors.lime)
+      else
+        monitor.setTextColor(colors.white)
+      end
+      monitor.write(v)
       monitor.setTextColor(colors.white)
     end
-    monitor.write(v)
-    monitor.setTextColor(colors.white)
   end
+  
+  -- Draw page navigation at bottom of left box
+  local totalPages = getTotalPages()
+  local pageNavY = mh - 3
+  
+  -- Previous page button (<)
+  if currentPage > 1 then
+    monitor.setCursorPos(2, pageNavY)
+    monitor.setTextColor(colors.cyan)
+    monitor.write("<")
+  else
+    monitor.setCursorPos(2, pageNavY)
+    monitor.setTextColor(colors.gray)
+    monitor.write("-")
+  end
+  
+  -- Page indicator
+  monitor.setCursorPos(5, pageNavY)
+  monitor.setTextColor(colors.white)
+  monitor.write(currentPage .. "/" .. totalPages)
+  
+  -- Next page button (>)
+  if currentPage < totalPages then
+    monitor.setCursorPos(10, pageNavY)
+    monitor.setTextColor(colors.cyan)
+    monitor.write(">")
+  else
+    monitor.setCursorPos(10, pageNavY)
+    monitor.setTextColor(colors.gray)
+    monitor.write("-")
+  end
+  
+  monitor.setTextColor(colors.white)
 end
 
 local function drawRightBox()
@@ -343,21 +410,21 @@ local function dialSequence()
     addresscheck = false
     err = "Address too short"
   elseif symbollistfordial[7] == "" then
-    if not configsf.smartdial then
+    if not configsd.smartdial then
       addresscheck = true
       reqGlyph = 7
     else
       addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9]})
     end
   elseif symbollistfordial[8] == "" then
-    if not configsf.smartdial then
+    if not configsd.smartdial then
       addresscheck = true
       reqGlyph = 8
     else
       addresscheck, err, reqGlyph = stargate.getSymbolsNeeded({symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9]})
     end
   else
-    if not configsf.smartdial then
+    if not configsd.smartdial then
       addresscheck = true
       reqGlyph = 9
     else
@@ -459,15 +526,36 @@ end
 
 -- === TOUCH HANDLING ===
 local function handleTouch(x,y)
-  -- Address select
-  if x >= 2 and x <= 18 and y >= 2 then
-    local index = y - 1
+  -- Page navigation (< button at position 2, y = mh-3)
+  if y == mh - 3 and x >= 2 and x <= 2 then
+    if currentPage > 1 then
+      currentPage = currentPage - 1
+      changed.left = true
+    end
+    return
+  end
+  
+  -- Page navigation (> button at position 10, y = mh-3)
+  if y == mh - 3 and x >= 10 and x <= 10 then
+    if currentPage < getTotalPages() then
+      currentPage = currentPage + 1
+      changed.left = true
+    end
+    return
+  end
+  
+  -- Address select (within the list area, not the page navigation area)
+  local pageNavY = mh - 3
+  if x >= 2 and x <= 18 and y >= 2 and y <= pageNavY - 1 then
+    local pageStart = getPageStart()
+    local index = pageStart + (y - 2)
     if addresses[index] then
       selectedAddress = index
       loadAddressSymbols(index)
       changed.left = true
       changed.right = true
     end
+    return
   end
 
   -- Symbols select (Mehrfach-Auswahl)
@@ -509,6 +597,7 @@ local function handleTouch(x,y)
     for i, entry in ipairs(gateEntries) do
       table.insert(addresses, entry.name)
     end
+    currentPage = 1
     selectedAddress = nil
     changed.left = true
     changed.right = true
