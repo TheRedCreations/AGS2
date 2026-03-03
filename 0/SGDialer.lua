@@ -838,7 +838,7 @@ while runtime do
     end
   end
   if e == "stargate_chevron_lit" then
-    if not stargate.getSymbolType() == "universe" then
+    if stargate.getSymbolType() == "milkyway" or stargate.getSymbolType() == "pegasus" then
       if x == 0 then
         --activateChevron(2)--1
         chevrons = {0,1,0,0,0,0,0,0,0}
