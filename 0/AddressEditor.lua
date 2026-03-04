@@ -448,7 +448,7 @@ local function handleTouch(x, y)
   local yStart = 17
   local cols = 3
   local colWidth = math.floor((mw - 4) / cols)
-  if y >= yStart + 1 and y <= yStart + 12 then
+  if y >= yStart + 1 and y <= yStart + 13 then
     local symbols = getSymbolsForType(currentGateType)
     local clickedCol = math.floor((x - 2) / colWidth)
     local clickedRow = y - yStart - 1
