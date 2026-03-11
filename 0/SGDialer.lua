@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.09"
+local Version = "1.10"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -72,6 +72,7 @@ local runtime = true
 local sendIDC = ""
 local IDCAccepted = false
 local DHDDial = false
+local str = require("cc.strings")
 
 -- Erstelle Adressen-Array aus Gate Entries
 local addresses = {}
@@ -258,7 +259,7 @@ local function drawLeftBox()
       else
         monitor.setTextColor(colors.white)
       end
-      monitor.write(v)
+      monitor.write(str.ensure_width(v,17))
       monitor.setTextColor(colors.white)
     end
   end
