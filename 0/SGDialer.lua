@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.10"
+local Version = "1.11"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -79,7 +79,6 @@ local addresses = {}
 for i, entry in ipairs(gateEntries) do
   table.insert(addresses, entry.name)
 end
-
 -- === Pagination ===
 local currentPage = 1
 local entriesPerPage = 0
@@ -249,6 +248,12 @@ local function drawLeftBox()
   local pageStart = getPageStart()
   local pageEnd = getPageEnd()
   
+if #addresses == 0 then
+    monitor.setCursorPos(21,1)
+    monitor.setTextColor(colors.red)
+    monitor.write("No Address in Database!")
+    monitor.setTextColor(colors.white)
+end
   for i = pageStart, pageEnd do
     local v = addresses[i]
     if v then
@@ -434,7 +439,7 @@ local function dialSequence()
   end
   if addresscheck == true then
     monitor.setCursorPos(21,1)
-    monitor.write("Dialing: "..entryName)
+    monitor.write("Dialing: "..str.ensure_width(entryName,31))
     if reqGlyph == 7 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
     elseif reqGlyph == 8 then
@@ -504,7 +509,7 @@ local function irisCodeRecived(IDC)
         end
         monitor.setCursorPos(21,1)
         monitor.setTextColor(colors.green)
-        monitor.write("Iris code '" .. entry.name .. "' accepted.")
+        monitor.write("Iris code '" .. str.ensure_width(entry.name,21) .. "' accepted.")
         stargate.sendMessageToIncoming("IDC Accepted")
         IDCAccepted = true
         monitor.setTextColor(colors.white)
