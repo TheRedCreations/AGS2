@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.11"
+local Version = "1.12"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -31,6 +31,25 @@ local function saveIrisCodes()
   file.write("-- Struktur: name, code, expires (timestamp), used (boolean)\n\n")
   file.write("return " .. textutils.serialize(irisCodes) .. "\n")
   file.close()
+end
+
+local function checkForUpdate()
+  local success, response = pcall(http.get, "https://raw.githubusercontent.com/TheRedCreations/AGS2/refs/heads/main/0/version.txt")  -- Replace with your pastebin raw URL containing version like "1.12"
+  if not success then
+    print("Update check failed: No internet/http enabled.")
+    return
+  end
+  local remoteVersion = response.readAll():match("^%s*(%d+%.%d+)")
+  response.close()
+  if remoteVersion and remoteVersion > Version then
+    print("Update available: " .. remoteVersion .. " (local: " .. Version .. ")")
+    monitor.setTextColor(colors.yellow)
+    monitor.setCursorPos(21,2)
+    monitor.write("Update available: " .. remoteVersion .. " (local: " .. Version .. ")")
+    monitor.setTextColor(colors.white)
+  else
+    print("No update available. You are on latest: " .. Version)
+  end
 end
 
 if configsf.selftest then
@@ -704,6 +723,8 @@ end
 
 -- === MAIN LOOP ===
 drawUI()
+
+checkForUpdate()
 
 while runtime do
   local e, side, x, y, z,za = os.pullEvent()
