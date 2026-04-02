@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.12"
+local Version = "1.13"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -551,6 +551,7 @@ end
 
 -- === TOUCH HANDLING ===
 local function handleTouch(x,y)
+  if not dialing then
   -- Page navigation (< button at position 2, y = mh-3)
   if y == mh - 3 and x >= 2 and x <= 2 then
     if currentPage > 1 then
@@ -668,6 +669,7 @@ local function handleTouch(x,y)
     dialSequence()
     changed.buttons = true
   end
+  end
 
   -- Close gate
   if gateOpen and x>=mw-37 and x<=mw-25 and y==mh-3 then
@@ -696,6 +698,7 @@ local function handleTouch(x,y)
 
   -- Clear button
   if x>=55 and x<=60 and y==3 then
+    if not dialing then
     symbollistfordial = {}
     numsymbolsselected = 0
     selectedAddress = 0
@@ -705,6 +708,7 @@ local function handleTouch(x,y)
     changed.right = true
     changed.left = true
     changed.buttons = true
+    end
   end
 
   -- Exit button
