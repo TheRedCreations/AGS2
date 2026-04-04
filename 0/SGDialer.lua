@@ -283,7 +283,7 @@ end
       else
         monitor.setTextColor(colors.white)
       end
-      monitor.write(str.wrap(v,17))
+      monitor.write(str.ensure_width(v,17))
       monitor.setTextColor(colors.white)
     end
   end
@@ -458,7 +458,7 @@ local function dialSequence()
   end
   if addresscheck == true then
     monitor.setCursorPos(21,1)
-    monitor.write("Dialing: "..str.wrap(entryName,31))
+    monitor.write("Dialing: "..str.ensure_width(entryName,31))
     if reqGlyph == 7 then
       stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
     elseif reqGlyph == 8 then
@@ -528,7 +528,7 @@ local function irisCodeRecived(IDC)
         end
         monitor.setCursorPos(21,1)
         monitor.setTextColor(colors.green)
-        monitor.write("Iris code '" .. str.wrap(entry.name,19) .. "' accepted.")
+        monitor.write("Iris code '" .. str.ensure_width(entry.name,19) .. "' accepted.")
         stargate.sendMessageToIncoming("IDC Accepted")
         IDCAccepted = true
         monitor.setTextColor(colors.white)
