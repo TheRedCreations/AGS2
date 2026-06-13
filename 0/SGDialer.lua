@@ -133,11 +133,11 @@ local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aries","Auriga","Bo
 local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
 local symbolsUN = {"17","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"}
 
-if stargate.getSymbolType() == "milkyway" then
+if stargate.getSymbolType() == "jsg:milkyway" or stargate.getSymbolType() == "milkyway" then
   symbols = symbolsMW
-elseif stargate.getSymbolType() == "pegasus" then
+elseif stargate.getSymbolType() == "jsg:pegasus" or stargate.getSymbolType() == "pegasus" then
   symbols = symbolsPG
-elseif stargate.getSymbolType() == "universe" then
+elseif stargate.getSymbolType() == "jsg:universe" or stargate.getSymbolType() == "universe" then
   symbols = symbolsUN
 else
   error("Unknown gate type: " .. stargate.getSymbolType())
