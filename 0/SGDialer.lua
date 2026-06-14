@@ -133,14 +133,14 @@ local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aries","Auriga","Bo
 local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
 local symbolsUN = {"17","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"}
 
-if stargate.getSymbolType() == "milkyway" then
+if stargate.getGateType() == "MilkyWay" then
   symbols = symbolsMW
-elseif stargate.getSymbolType() == "pegasus" then
+elseif stargate.getGateType() == "Pegasus" then
   symbols = symbolsPG
-elseif stargate.getSymbolType() == "universe" then
+elseif stargate.getGateType() == "Universe" then
   symbols = symbolsUN
 else
-  error("Unknown gate type: " .. stargate.getSymbolType())
+  error("Unknown gate type: " .. stargate.getGateType())
 end
 
 -- === DRAW HELPERS ===
@@ -171,13 +171,13 @@ end
 local chevrons = {0,0,0,0,0,0,0,0,0}  -- 0=inactive, 1=active
 local innerColor = colors.black  -- Farbe des Ring-Inneren
 local chevronColors = {
-  milkyway = colors.orange,
-  pegasus = colors.blue,
-  universe = colors.white
+  MilkyWay = colors.orange,
+  Pegasus = colors.blue,
+  Universe = colors.white
 }
 
 local function getChevronColor()
-  local gateType = stargate.getSymbolType()
+  local gateType = stargate.getGateType()
   return chevronColors[gateType]
 end
 
@@ -491,14 +491,14 @@ local function loadAddressSymbols(addressIndex)
   
   if addressIndex and gateEntries[addressIndex] then
     local entry = gateEntries[addressIndex]
-    local gateType = stargate.getSymbolType()
+    local gateType = stargate.getGateType()
     local symbolSequence = {}
     
-    if gateType == "milkyway" and entry.mw then
+    if gateType == "MilkyWay" and entry.mw then
       symbolSequence = entry.mw
-    elseif gateType == "pegasus" and entry.pg then
+    elseif gateType == "Pegasus" and entry.pg then
       symbolSequence = entry.pg
-    elseif gateType == "universe" and entry.un then
+    elseif gateType == "Universe" and entry.un then
       symbolSequence = entry.un
     end
     sendIDC = entry.idc
