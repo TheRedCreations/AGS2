@@ -196,13 +196,14 @@ local function drawSymbols()
   
   local symbols = getSymbolsForType(currentGateType)
   local cols = 3
+  local rows = h - 2
   local colWidth = math.floor((mw - 4) / cols)
   
   for i, sym in ipairs(symbols) do
-    local col = (i - 1) % cols
-    local row = yStart + math.floor((i - 1) / cols) + 1
+    local col = math.floor((i - 1) / rows)
+    local row = yStart + ((i - 1) % rows) + 1
     
-    if row < yStart + h - 1 then
+    if col < cols and row < yStart + h - 1 then
       local xPos = 2 + col * colWidth
       monitor.setCursorPos(xPos, row)
       
@@ -445,8 +446,9 @@ local function handleTouch(x, y)
     return
   end]]--
   
-  local yStart = 17
+local yStart = 17
   local cols = 3
+  local rows = 13
   local colWidth = math.floor((mw - 4) / cols)
   if y >= yStart + 1 and y <= yStart + 13 then
     local symbols = getSymbolsForType(currentGateType)
@@ -454,7 +456,7 @@ local function handleTouch(x, y)
     local clickedRow = y - yStart - 1
     
   if clickedCol >= 0 and clickedCol < cols and clickedRow >= 0 then
-      local idx = clickedRow * cols + clickedCol + 1
+      local idx = clickedCol * rows + clickedRow + 1
       -- Erster Symbol (Point of Origin/Subido/17) ist nicht anklickbar
       if idx == 1 then
         return

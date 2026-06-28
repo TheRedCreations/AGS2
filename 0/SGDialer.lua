@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.16"
+local Version = "1.17"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
