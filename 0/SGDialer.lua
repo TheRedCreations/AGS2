@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.20"
+local Version = "1.21"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -592,12 +592,16 @@ local function drawIDCOverlay(code, entryName, accepted)
   monitor.write(codeLine2)
 
   -- Große Erkennungszeile
-  local recog = "RECOGNIZED: " .. (entryName or "UNKNOWN")
+  local recog1 = "RECOGNIZED:"
+  local recog2 = (entryName or "UNKNOWN")
   local recogColor = accepted and colors.lime or colors.red
-  local rcx = x0 + 1 + math.floor((boxW - 2 - #recog) / 2)
-  monitor.setCursorPos(rcx, y0 + 7)
+  local rcx1 = x0 + 1 + math.floor((boxW - 2 - #recog1) / 2)
+  monitor.setCursorPos(rcx1, y0 + 7)
   monitor.setTextColor(recogColor)
-  monitor.write(recog)
+  monitor.write(recog1)
+  local rcx2 = x0 + 1 + math.floor((boxW - 2 - #recog2) / 2)
+  monitor.setCursorPos(rcx2, y0 + 8)
+  monitor.write(recog2)
 
   -- Hinweiszeile / optionaler Status
   monitor.setTextColor(colors.gray)
@@ -888,14 +892,11 @@ while runtime do
   if e == "stargate_wormhole_open_fully" then
     local _,_, openState = stargate.getGateStatus()
     if openState then
-      if not DHDDial then
         if sendIDC ~= "" then
           stargate.sendIrisCode(sendIDC)
           monitor.setCursorPos(21,1)
           monitor.write("Sending IDC. Iris could be closed!")
         end
-      end
-      
     end
   end
   if e == "stargate_wormhole_incoming" then
