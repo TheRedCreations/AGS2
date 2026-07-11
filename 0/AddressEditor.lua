@@ -224,7 +224,7 @@ local function drawButtons()
   local btnY = mh - 1
   button(2, btnY, 6, "Save", colors.green)
   button(9, btnY, 6, "Clear", colors.orange)
-  button(17, btnY, 16, "Import from Gate", colors.blue)
+  button(17, btnY, 16, "Import from Gate", colors.lightGray)
   if mode == "edit" then
     button(36, btnY, 8, "Delete", colors.red)
     button(45, btnY, 6, "Cancel", colors.white)
@@ -350,7 +350,19 @@ local function importFromGate()
     table.insert(addressSymbols, tostring(symbol))
   end
   
-  currentGateType = detectedType
+  -- saveGateEntries hängt von currentGateType ab
+  -- Normalisieren, damit GateEntries in das richtige Array geschrieben werden.
+  if type(detectedType) == "string" then
+    local low = string.lower(detectedType)
+    if low:find("milkyway", 1, true) then currentGateType = "MilkyWay"
+    elseif low:find("pegasus", 1, true) then currentGateType = "Pegasus"
+    elseif low:find("universe", 1, true) then currentGateType = "Universe"
+    else
+      currentGateType = detectedType
+    end
+  else
+    currentGateType = detectedType
+  end
   slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8 = "", "", "", "", "", "", "", ""
   
   for i = 1, math.min(#addressSymbols, 9) do
@@ -595,10 +607,10 @@ local yStart = 17
     return
   end
   
-  if y == btnY and x >= 17 and x <= 32 then
+  --[[if y == btnY and x >= 17 and x <= 32 then
     importFromGate()
     return
-  end
+  end]]--
 
   if y == btnY and x >= 36 and x <= 44 then
     if mode == "edit" and editIndex and editIndex > 0 then
