@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.19"
+local Version = "1.20"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -470,11 +470,35 @@ local function dialSequence()
     monitor.setCursorPos(21,1)
     monitor.write("Dialing: "..str.ensure_width(entryName or "Unknown",31))
     if reqGlyph == 7 then
-      stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
+      if stargate.customDialAddress then
+        if configsd.fastdial then
+          stargate.customDialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9],"FAST")
+        else
+          stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
+        end
+      else
+        stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[9])
+      end
     elseif reqGlyph == 8 then
-      stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
+      if stargate.customDialAddress then
+        if configsd.fastdial then
+          stargate.customDialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9],"FAST")
+        else
+          stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
+        end
+      else
+        stargate.dialAddress(symbollistfordial[1],symbollistfordial[2],symbollistfordial[3],symbollistfordial[4],symbollistfordial[5],symbollistfordial[6],symbollistfordial[7],symbollistfordial[9])
+      end
     else
-      stargate.dialAddress(symbollistfordial)
+      if stargate.customDialAddress then
+        if configsd.fastdial then
+          stargate.customDialAddress(symbollistfordial,"FAST")
+        else
+          stargate.dialAddress(symbollistfordial)
+        end
+      else
+        stargate.dialAddress(symbollistfordial)
+      end
     end
     dialing = true
     if redstonerelay then
@@ -520,47 +544,117 @@ local function loadAddressSymbols(addressIndex)
 end
 
 -- === IRIS CODE RECEIVED HANDLER ===
+local function drawIDCOverlay(code, entryName, accepted)
+  local boxW = math.min(25, mw - 6)
+  local boxH = 11
+  local x0 = math.floor((mw - boxW) / 2) 
+  local y0 = math.floor((mh - boxH) / 2) + 1
+
+  -- Draw boxed area like the other UI boxes
+  monitor.setBackgroundColor(coloring.background)
+  monitor.setTextColor(coloring.text)
+  box(x0, y0, boxW, boxH, "")
+
+  -- Clear inner area
+  for yy = y0 + 1, y0 + boxH - 2 do
+    monitor.setCursorPos(x0 + 1, yy)
+    monitor.write(string.rep(" ", boxW - 2))
+  end
+
+  -- obere "Wave"-Anzeige (vereinfachte Grafik)
+  for ry = 0, 2 do
+    monitor.setCursorPos(x0 + 2, y0 + 1 + ry)
+    for cx = 1, boxW - 4 do
+      if (cx + ry) % 7 == 0 then
+        monitor.setTextColor(colors.green)
+        monitor.write("/")
+      else
+        monitor.setTextColor(colors.red)
+        monitor.write("\\")
+      end
+    end
+  end
+
+  -- Trennlinie
+  monitor.setTextColor(colors.gray)
+  monitor.setCursorPos(x0 + 2, y0 + 4)
+  monitor.write(string.rep("-", boxW - 4))
+
+  -- Code-Zeilen (zentriert innerhalb der Box)
+  local codeLine1 = "SIGNAL DECRYPTED"
+  local codeLine2 = "CODE: " .. tostring(code)
+  local cx1 = x0 + 1 + math.floor((boxW - 2 - #codeLine1) / 2)
+  monitor.setCursorPos(cx1, y0 + 5)
+  monitor.setTextColor(colors.lightGray)
+  monitor.write(codeLine1)
+  local cx2 = x0 + 1 + math.floor((boxW - 2 - #codeLine2) / 2)
+  monitor.setCursorPos(cx2, y0 + 6)
+  monitor.write(codeLine2)
+
+  -- Große Erkennungszeile
+  local recog = "RECOGNIZED: " .. (entryName or "UNKNOWN")
+  local recogColor = accepted and colors.lime or colors.red
+  local rcx = x0 + 1 + math.floor((boxW - 2 - #recog) / 2)
+  monitor.setCursorPos(rcx, y0 + 7)
+  monitor.setTextColor(recogColor)
+  monitor.write(recog)
+
+  -- Hinweiszeile / optionaler Status
+  monitor.setTextColor(colors.gray)
+  local info = accepted and "IDC accepted" or "IDC rejected"
+  local icx = x0 + 1 + math.floor((boxW - 2 - #info) / 2)
+  monitor.setCursorPos(icx, y0 + 9)
+  monitor.write(info)
+
+  -- Reset Farben
+  monitor.setTextColor(coloring.text)
+  monitor.setBackgroundColor(coloring.background)
+end
+
 local function irisCodeRecived(IDC)
+  -- Suche Eintrag
   for i, entry in ipairs(irisCodes) do
     if entry.code == IDC and not entry.used then
       if entry.limited then
         entry.used = true
         saveIrisCodes()
       end
-        -- Gültiger Code: Iris öffnen
-        if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
-          setInnerColor(coloring.eventhorizont)
-          drawGate(coloring.gatering)
-          stargate.toggleIris()
-          changed.buttons = true
-          drawButtons()
-        end
-        monitor.setCursorPos(21,1)
-        monitor.setTextColor(colors.green)
-        monitor.write("Iris code '" .. str.ensure_width(entry.name,19) .. "' accepted.")
-        stargate.sendMessageToIncoming("IDC Accepted")
-        stargate.sendMessageToIncomingTraveller("IDC Accepted")
-        IDCAccepted = true
-        monitor.setTextColor(coloring.text)
-        sleep(5)
-        monitor.setCursorPos(21,1)
-        monitor.write(string.rep(" ", 41))
-        return
+
+
+      -- Iris öffnen und Nachrichten senden
+      if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
+        setInnerColor(coloring.eventhorizont)
+        drawGate(coloring.gatering)
+        stargate.toggleIris()
+        changed.buttons = true
+        drawButtons()
+      end
+      if stargate.sendMessageToIncoming then
+      stargate.sendMessageToIncoming("IDC Accepted")
+    else
+      stargate.sendMessageToIncomingTraveller("IDC Accepted")
+    end
+      IDCAccepted = true
+      -- Zeige Overlay accepted
+      drawIDCOverlay(IDC, entry.name, true)
+
+      sleep(5)
+      -- Overlay entfernen und UI neu zeichnen
+      setInnerColor(coloring.eventhorizont)
+      drawGate(coloring.gatering)
+      return
     end
   end
-  -- Kein gültiger Code
-  monitor.setCursorPos(21,1)
-  monitor.setTextColor(colors.red)
-  monitor.write("Invalid iris code received.")
+
+  -- Kein gültiger Code -> Overlay rejected
+  drawIDCOverlay(IDC, "UNKNOWN", false)
   if stargate.sendMessageToIncoming then
-  stargate.sendMessageToIncoming("IDC Rejected")
+    stargate.sendMessageToIncoming("IDC Rejected")
   else
-  stargate.sendMessageToIncomingTraveller("IDC Rejected")
+    stargate.sendMessageToIncomingTraveller("IDC Rejected")
   end
-  monitor.setTextColor(coloring.text)
   sleep(5)
-  monitor.setCursorPos(21,1)
-  monitor.write(string.rep(" ", 41))
+  drawGate(coloring.gatering)
 end
 
 -- === TOUCH HANDLING ===
