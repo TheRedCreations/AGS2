@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.18"
+local Version = "1.19"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -644,6 +644,9 @@ local function handleTouch(x,y)
     changed.left = true
     changed.right = true
     changed.buttons = true
+    monitor.setTextScale(0.5)
+    monitor.setBackgroundColor(coloring.background)
+    monitor.setTextColor(coloring.text)
     drawUI()
   end
 
@@ -669,6 +672,9 @@ local function handleTouch(x,y)
       changed.right = true
       changed.buttons = true
       changed.status = true
+      monitor.setTextScale(0.5)
+      monitor.setBackgroundColor(coloring.background)
+      monitor.setTextColor(coloring.text)
       drawUI()
     end
   end
@@ -679,6 +685,9 @@ local function handleTouch(x,y)
     -- Reload iris codes after returning mw-23,mh-3
     irisCodes = dofile("IrisCodes.ff")
     changed.buttons = true
+    monitor.setTextScale(0.5)
+    monitor.setBackgroundColor(coloring.background)
+    monitor.setTextColor(coloring.text)
     drawUI()
   end
 
