@@ -413,10 +413,16 @@ end
 local function drawStatus()
   box(1,mh-2,mw-18,3)
   monitor.setCursorPos(2,mh-1)
-  monitor.write("Energy: "..stargate.getEnergyStored().." FE")
-  monitor.setCursorPos(33,mh-1)
+  monitor.write("Energy: ")
+  energy = stargate.getEnergyStored()
+  if energy > 30000000000 then
+    monitor.write("Infinite FE")
+  else
+    monitor.write(energy.." FE")
+  end
+  monitor.setCursorPos(26,mh-1)
   monitor.write("Capacitors installed: ")
-  monitor.setCursorPos(55,mh-1)
+  monitor.setCursorPos(48,mh-1)
   monitor.write(capacitors)
   monitor.setCursorPos(mw-22,mh-1)
   monitor.write(Version)
