@@ -19,6 +19,7 @@ local symbolsUN = {"17", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"
 local entryName = ""
 local slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8, slot9 = "", "", "", "", "", "", "", "", ""
 local entryIDC = ""
+local textcolor = colors.white
 local stargate = peripheral.find("stargate")
 local currentGateType = "MilkyWay"
 local inputMode = "name"
@@ -36,6 +37,7 @@ end
 
 monitor.setTextScale(0.5)
 monitor.setBackgroundColor(colors.black)
+monitor.setTextColor(colors.white)
 monitor.clear()
 
 local mw, mh = monitor.getSize()
@@ -60,7 +62,8 @@ local function saveGateEntries()
     mw = {},
     pg = {},
     un = {},
-    idc = entryIDC
+    idc = entryIDC,
+    textcolor = textcolor
   }
   
   local gt = string.lower(currentGateType)
@@ -230,6 +233,81 @@ local function drawButtons()
   end
 end
 
+local function drawColorPicker()
+  -- y=33..37 (unterhalb der Symbolliste)
+  local yTop = 32
+  local h = 5
+  local colorsList = {colors.white, colors.orange, colors.magenta, colors.lightBlue, colors.yellow, colors.pink, colors.gray, colors.lightGray, colors.cyan, colors.purple, colors.blue, colors.brown, colors.red}
+  box(1, yTop, mw, h, "Entry Color:")
+
+  -- Raster-Positionen so legen, dass sie zur Touch-Logik passen.
+  -- Touch rechnet: yTopTouch=33, relY = y - (yTopTouch + 1) => relY = y - 34
+  -- idx = row*5 + col + 1, dabei ist col=row-basiert in der Touch-Logik.
+  local xStart = 3
+  local cellW = 5
+  local cellGap = 1
+  local cellH = 1
+
+  for idx, c in ipairs(colorsList) do
+    local col = (idx - 1) % 5
+    local row = math.floor((idx - 1) / 5) -- 0 oder 1
+
+    local xPos = xStart + col * (cellW + cellGap)
+    -- +2 statt +1, damit Anklick-Y nicht „eine Zeile zu hoch“ ist
+    local yPos = yTop + 1 + row * cellH
+
+
+    -- Hintergrund als Farbfeld
+    monitor.setCursorPos(xPos, yPos)
+    monitor.setBackgroundColor(c)
+
+    -- Textfarbe so wählen, dass es sichtbar bleibt
+    local tcol = colors.white
+    if c == colors.yellow or c == colors.lightGray or c == colors.gray then
+      tcol = colors.black
+    end
+    monitor.setTextColor(tcol)
+
+    monitor.write(string.rep(" ", cellW))
+
+    -- kleine Markierung für Selected
+    if textcolor == c then
+      monitor.setCursorPos(xPos, yPos)
+      monitor.setBackgroundColor(c)
+      monitor.setTextColor(colors.black)
+      monitor.write("*")
+      -- Rest wieder zurückfüllen (damit der Stern nicht allein steht)
+      if cellW > 1 then
+        monitor.write(string.rep(" ", cellW - 1))
+      end
+    end
+
+    monitor.setBackgroundColor(coloring and coloring.background or colors.black)
+    monitor.setTextColor(colors.white)
+  end
+
+  -- Anzeige ausgewählter Farbe
+  monitor.setCursorPos(21, yTop + 3)
+  monitor.setTextColor(textcolor)
+  monitor.write("Selected")
+  monitor.setTextColor(colors.white)
+end
+
+-- Speichere die aktuelle Adresse in das richtige Array
+local function saveCurrentToTemp()
+  local addressArray = {slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8, slot9}
+  local gt = string.lower(currentGateType)
+  print(gt)
+  if gt == "milkyway" or "jsg:milkyway" then
+    savedMW = addressArray
+  elseif gt == "pegasus" or "jsg:pegasus" then
+    savedPG = addressArray
+  elseif gt == "universe" or "jsg:universe" then
+    savedUN = addressArray
+  end
+end
+
+
 local function drawUI()
   drawHeader()
   drawNameInput()
@@ -237,6 +315,7 @@ local function drawUI()
   drawGateTypeSelector()
   drawSlots()
   drawSymbols()
+  drawColorPicker()
   drawButtons()
 end
 
@@ -307,12 +386,17 @@ local function importFromGate()
   sleep(1)
   monitor.setCursorPos(21, 2)
   monitor.write(string.rep(" ", 20))
+
+  saveCurrentToTemp()
 end
+
+
 
 if mode == "edit" and editIndex and gateEntries[editIndex] then
   local entry = gateEntries[editIndex]
   entryName = entry.name or ""
   entryIDC = entry.idc or ""
+  textcolor = entry.textcolor or colors.white
   
   savedMW = entry.mw or {}
   savedPG = entry.pg or {}
@@ -336,19 +420,6 @@ if mode == "edit" and editIndex and gateEntries[editIndex] then
   end
 else
   slot9 = getFirstSymbol(currentGateType)
-end
-
--- Speichere die aktuelle Adresse in das richtige Array
-local function saveCurrentToTemp()
-  local addressArray = {slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8, slot9}
-  local gt = string.lower(currentGateType)
-  if gt == "milkyway" then
-    savedMW = addressArray
-  elseif gt == "pegasus" then
-    savedPG = addressArray
-  elseif gt == "universe" then
-    savedUN = addressArray
-  end
 end
 
 local function handleTouch(x, y)
@@ -528,6 +599,58 @@ local yStart = 17
     importFromGate()
     return
   end
+
+  if y == btnY and x >= 36 and x <= 44 then
+    if mode == "edit" and editIndex and editIndex > 0 then
+      local tempEntries = dofile("GateEntries.ff")
+      if editIndex > 0 and editIndex <= #tempEntries then
+        table.remove(tempEntries, editIndex)
+        local file = fs.open("GateEntries.ff", "w")
+        file.write("-- Gate Entries Database\n")
+        file.write("-- Struktur: name, mw (MilkyWay), pg (Pegasus), un (Universe), idc (ID Code)\n\n")
+        file.write("return " .. textutils.serialize(tempEntries) .. "\n")
+        file.close()
+      end
+      editing = false
+      return
+    elseif mode ~= "edit" then
+      editing = false
+      return
+    end
+  end
+
+  if y == btnY and x >= 45 and x <= 51 then
+    editing = false
+    return
+  end
+
+  -- Entry Color picker (nur speichern in textcolor)
+  -- Rendering: drawColorPicker() benutzt yTop=32 und yPos=yTop+1+row.
+  -- => row 0 ist y=33, row 1 ist y=34.
+  -- Erlaube 3 Zeilen im Touch (damit letzte 3 Farben in Zeile 3 anklickbar sind)
+  if y >= 33 and y <= 35 and x >= 3 and x <= mw - 2 then
+    local colorsList = {colors.white, colors.orange, colors.magenta, colors.lightBlue, colors.yellow, colors.pink, colors.gray, colors.lightGray, colors.cyan, colors.purple, colors.blue, colors.brown, colors.red}
+
+    local xStart = 3
+    local cellW = 5
+    local cellGap = 1
+    local colWidth = cellW + cellGap -- 6
+
+    local relX = x - xStart
+    local col = math.floor(relX / colWidth) -- 0..4
+    local row = y - 33 -- 0..2
+
+    if col >= 0 and col <= 4 and row >= 0 and row <= 2 then
+      local idx = row * 5 + col + 1
+      if idx >= 1 and idx <= 13 then -- deckt min. 12 Felder ab
+        textcolor = colorsList[idx]
+        drawColorPicker()
+      end
+    end
+    return
+  end
+
+
   
   if mode == "edit" and y == btnY and x >= 36 and x <= 44 then
     if editIndex and editIndex > 0 then

@@ -38,5 +38,6 @@ return {
       "Auriga",
       "Point of Origin",
     },
+    textcolor = colors.white
   },
 }

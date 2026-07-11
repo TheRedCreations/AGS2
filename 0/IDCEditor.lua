@@ -13,6 +13,7 @@ end
 
 monitor.setTextScale(0.5)
 monitor.setBackgroundColor(colors.black)
+monitor.setTextColor(colors.white)
 monitor.clear()
 
 local mw, mh = monitor.getSize()
@@ -138,8 +139,8 @@ local function drawButtons()
     button(9, btnY, 6, "Edit", colors.blue)
     button(16, btnY, 8, "Delete", colors.red)
     button(25, btnY, 6, "Toggle", colors.yellow)
-    button(33, btnY, 6, "Clear", colors.orange)
-    button(41, btnY, 6, "Exit", colors.white)
+    button(34, btnY, 6, "Clear", colors.orange)
+    button(42, btnY, 6, "Exit", colors.white)
   elseif mode == "add" or mode == "edit" then
     button(2, btnY, 6, "Save", colors.green)
     button(9, btnY, 6, "Cancel", colors.white)
@@ -271,12 +272,12 @@ local function handleTouch(x, y)
       return
     end
     
-    if y == btnY and x >= 33 and x <= 38 then
+    if y == btnY and x >= 34 and x <= 39 then
       clearUsed()
       return
     end
     
-    if y == btnY and x >= 41 and x <= 46 then
+    if y == btnY and x >= 42 and x <= 47 then
       editing = false
       return
     end
