@@ -1080,7 +1080,7 @@ while runtime do
     if x == 987 then
       if z == "ManIrisDeactivation" then
         IDCAccepted = true
-        if stargate.getIrisState == "CLOSED" or stargate.getIrisState == "CLOSING" then
+        if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
           stargate.toggleIris()
         end
       end
