@@ -353,10 +353,10 @@ local function drawRightBox()
   if symNeedsScroll then
     monitor.setCursorPos(mw-15, mh)
     monitor.setTextColor(symOffset > 0 and colors.cyan or colors.gray)
-    monitor.write("[" .. ARROW_UP .. "]")
+    monitor.write("[" .. string.char(30) .. "]")
     monitor.setCursorPos(mw-11, mh)
     monitor.setTextColor(symOffset < symMaxOffset and colors.cyan or colors.gray)
-    monitor.write("[" .. ARROW_DOWN .. "]")
+    monitor.write("[" .. string.char(31) .. "]")
     monitor.setTextColor(coloring.text)
   end
   for i=1,symVisibleRows do
