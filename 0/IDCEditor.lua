@@ -3,7 +3,6 @@
 -- IDC EDITOR
 -- For managing Iris Codes in IrisCodes.ff
 -- ===============================
-
 local irisCodes = dofile("IrisCodes.ff")
 
 local monitor = peripheral.find("monitor")

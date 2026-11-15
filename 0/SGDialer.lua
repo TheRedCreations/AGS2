@@ -3,7 +3,7 @@
 -- STARGATE DIALING COMPUTER
 -- CC:Tweaked Monitor Version
 -- ===============================
-local Version = "1.21"
+local Version = "1.22"
 -- === MONITOR SETUP ===
 local monitor = peripheral.find("monitor")
 if not monitor then
@@ -35,8 +35,10 @@ local function saveIrisCodes()
 end
 
 local function checkForUpdate()
-  local success, response = pcall(http.get, "https://raw.githubusercontent.com/TheRedCreations/AGS2/refs/heads/main/0/version.txt")  -- Replace with your pastebin raw URL containing version like "1.12"
-  if not success then
+  local success, response = pcall(function()
+    return http.get("https://raw.githubusercontent.com/TheRedCreations/AGS2/refs/heads/main/0/version.txt")  -- Replace with your pastebin raw URL containing version like "1.12"
+  end)
+  if not success or not response then
     print("Update check failed: No internet/http enabled.")
     return
   end
@@ -92,7 +94,6 @@ local changed = {}
 local runtime = true
 local sendIDC = ""
 local IDCAccepted = false
-local DHDDial = false
 local str = require("cc.strings")
 gatesymboltype = stargate.getSymbolType()
 
@@ -134,8 +135,8 @@ local symbollistfordial = {}
 local numsymbolsselected = 0
 local nineSelected = false
 
-local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aries","Auriga","Bootes","Cancer","Canis Minor","Capricornus","Centaurus","Cetus","Corona Australis","Crater","Equuleus","Eridanus","Gemini","Hydra","Leo","Leo Minor","Libra","Lynx","Microscopium","Monoceros","Norma","Orion","Pegasus","Perseus","Pisces","Piscis Austrinus","Sagittarius","Scorpius","Sculptor","Scutum","Serpens Caput","Sextans","Taurus","Triangulum","Virgo"}
-local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
+local symbolsMW = {"Point of Origin","Andromeda","Aquarius","Aquilla","Aries","Auriga","Bootes","Cancer","Canis Minor","Capricornus","Centaurus","Cetus","Corona Australis","Crater","Equuleus","Eridanus","Gemini","Hydra","Leo","Leo Minor","Libra","Lynx","Microscopium","Monoceros","Norma","Orion","Pegasus","Perseus","Pisces","Piscis Austrinus","Sagittarius","Scorpius","Sculptor","Scutum","Serpens Caput","Sextans","Taurus","Triangulum","Virgo"}
+local symbolsPG = {"Subido","Aaxel","Abrin","Acjesis","Aldeni","Alura","Amiwill","Arami","Avoniv","Baselai","Bydo","Ca Po","Danami","Dawnre","Ecrumig","Elenami","Fenrin","Gilltin","Hacemill","Hamlinto","Illume","Laylox","Lenchan","Na Po","Olavii","Once El","Poco Re","Ramnon","Recktic","Robandus","Roehi","Salma","Sandovi","Setas","Sibbron","Tahnan","Zamilloz","Zeo"}
 local symbolsUN = {"17","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"}
 
 if gatesymboltype == "jsg:milkyway" or gatesymboltype== "milkyway" then
@@ -146,6 +147,19 @@ elseif gatesymboltype == "jsg:universe" or gatesymboltype== "universe" then
   symbols = symbolsUN
 else
   error("Unknown gate type: " .. gatesymboltype)
+end
+
+-- === Symbol-Liste scrollen (Pfeil-Buttons) ===
+-- Passen nicht alle Symbole auf den Monitor, bleibt Zeile 1 (Point of Origin)
+-- fest, die letzte Zeile (mh) zeigt die Pfeile und dazwischen wird gescrollt.
+local symOffset = 0
+local symNeedsScroll = #symbols > mh
+local symVisibleRows = symNeedsScroll and (mh - 1) or #symbols
+local symMaxOffset = symNeedsScroll and (#symbols - symVisibleRows) or 0
+
+local function symIndexForRow(row)
+  if row == 1 then return 1 end
+  return row + symOffset
 end
 
 -- === DRAW HELPERS ===
@@ -335,20 +349,31 @@ end
 
 local function drawRightBox()
   box(mw-16,0,18,mh+2,"Symbols ("..numsymbolsselected.."/8)")
-  for i=1,math.min(#symbols,mh) do
+  -- Pfeil-Buttons in der letzten Zeile
+  if symNeedsScroll then
+    monitor.setCursorPos(mw-15, mh)
+    monitor.setTextColor(symOffset > 0 and colors.cyan or colors.gray)
+    monitor.write("[" .. ARROW_UP .. "]")
+    monitor.setCursorPos(mw-11, mh)
+    monitor.setTextColor(symOffset < symMaxOffset and colors.cyan or colors.gray)
+    monitor.write("[" .. ARROW_DOWN .. "]")
+    monitor.setTextColor(coloring.text)
+  end
+  for i=1,symVisibleRows do
+    local idx = symIndexForRow(i)
     monitor.setCursorPos(mw-15,0+i)
     local isSelected = false
     local selectionIndex = 0
 
     -- Sonderfall: erstes Symbol kann als Slot 9 benutzt werden
-    if i == 1 and nineSelected then
+    if idx == 1 and nineSelected then
       isSelected = true
       selectionIndex = 9
     else
-      for idx, sym in ipairs(symbollistfordial) do
-        if sym == symbols[i] then
+      for n, sym in ipairs(symbollistfordial) do
+        if sym == symbols[idx] then
           isSelected = true
-          selectionIndex = idx
+          selectionIndex = n
           break
         end
       end
@@ -360,16 +385,16 @@ local function drawRightBox()
       monitor.setTextColor(coloring.text)
     end
     if gatesymboltype == "universe" or gatesymboltype == "jsg:universe" then
-      monitor.write("Glyph " .. symbols[i])
+      monitor.write("Glyph " .. symbols[idx])
       monitor.setTextColor(coloring.text)
     else
-      monitor.write(symbols[i])
+      monitor.write(symbols[idx])
       monitor.setTextColor(coloring.text)
     end
     
 
     -- Zeige die Reihenfolgenummer außerhalb der Box (nicht für erstes Symbol)
-    if i ~= 1 then
+    if idx ~= 1 then
       monitor.setCursorPos(mw-17,0+i)
       if isSelected then
         monitor.setTextColor(colors.lime)
@@ -698,7 +723,19 @@ local function handleTouch(x,y)
 
   -- Symbols select (Mehrfach-Auswahl)
   if x >= mw-16 and x <= mw and y >= 1 and y <= mh then
-    local index = y
+    -- Pfeil-Buttons (letzte Zeile)
+    if symNeedsScroll and y == mh then
+      if x >= mw-15 and x <= mw-13 and symOffset > 0 then
+        symOffset = symOffset - 1
+        changed.right = true
+      elseif x >= mw-11 and x <= mw-9 and symOffset < symMaxOffset then
+        symOffset = symOffset + 1
+        changed.right = true
+      end
+      return
+    end
+    if y > symVisibleRows then return end
+    local index = symIndexForRow(y)
     if symbols[index] then
       -- Sonderfall: erstes Symbol toggelt exklusiv Slot 9
       if index == 1 then

@@ -15,7 +15,7 @@ return {
       "Recktic",
       "Subido",
     },
-    idc = "1",
+    idc = "0",
     un = {
       "5",
       "6",
