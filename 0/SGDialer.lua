@@ -1083,6 +1083,8 @@ while runtime do
         if stargate.getIrisState() == "CLOSED" or stargate.getIrisState() == "CLOSING" then
           stargate.toggleIris()
         end
+        setInnerColor(coloring.eventhorizont)
+        drawGate(coloring.gatering)
       end
     end
   end
