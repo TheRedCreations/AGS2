@@ -77,6 +77,12 @@ if configsf.selftest then
 end
 
 local redstonerelay = peripheral.find("redstone_relay")
+local modem = peripheral.find("modem")
+if modem.isWireless() then
+  print("Remove Wireless Modem")
+else
+  modem.open(987)
+end
 
 
 monitor.setTextScale(0.5)
@@ -1067,6 +1073,16 @@ while runtime do
     if not IDCAccepted then
       if stargate.getIrisState() == "OPENED" or stargate.getIrisState() == "OPENING" then
         stargate.toggleIris()
+      end
+    end
+  end
+  if e == "modem_message" then
+    if x == 987 then
+      if z == "" then
+        IDCAccepted = true
+        if sg.getIrisState == "CLOSED" or sg.getIrisState == "CLOSING" then
+          sg.toggleIris()
+        end
       end
     end
   end
