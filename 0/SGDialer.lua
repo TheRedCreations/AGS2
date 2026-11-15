@@ -1078,7 +1078,7 @@ while runtime do
   end
   if e == "modem_message" then
     if x == 987 then
-      if z == "" then
+      if z == "ManIrisDeactivation" then
         IDCAccepted = true
         if sg.getIrisState == "CLOSED" or sg.getIrisState == "CLOSING" then
           sg.toggleIris()
